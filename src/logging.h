@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2017  SRI International
+ *
+ */
 #ifndef __LFHT_LOGGING_H__
 #define __LFHT_LOGGING_H__
 

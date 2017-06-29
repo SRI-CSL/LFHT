@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2017  SRI International
+ *
+ */
 #ifndef __ATOMIC_H__
 #define __ATOMIC_H__
 

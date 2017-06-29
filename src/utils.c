@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2017  SRI International
+ *
+ */
 #include "utils.h"
 
 /* 

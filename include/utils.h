@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2017  SRI International
+ *
+ */
 #ifndef __UTIL_H__
 #define __UTIL_H__
 
