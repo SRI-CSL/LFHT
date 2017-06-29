@@ -17,7 +17,7 @@
  */
 
 
-/* Expanding Lock Free Hash Table (using only 64 bit CAS) */
+/* Expanding (almsot) Lock Free Hash Table (using 64 and 128 bit CAS operations) */
 
 #ifndef __LFHT_H__
 #define __LFHT_H__
