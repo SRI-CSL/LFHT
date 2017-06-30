@@ -1,0 +1,13 @@
+*~
+/obj
+/lib
+*.dSYM
+tests/futz
+tests/test_eight
+tests/test_five
+tests/test_four
+tests/test_one
+tests/test_seven
+tests/test_six
+tests/test_three
+tests/test_two
