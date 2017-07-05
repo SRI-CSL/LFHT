@@ -1,0 +1,69 @@
+lfht_1: CONTEXT =
+BEGIN
+  N : int = 10;
+  T : int = 6;
+  THRESHOLD : real = 6/10;
+  table_index: TYPE = [1 .. N];
+  descriptor: TYPE = [# num_entries : nat, num_to_migrate: nat, assimilated : bool #];
+  table: TYPE = ARRAY table_index OF descriptor;
+  empty_descriptor : descriptor = (# num_entries := 0, num_to_migrate := 0, assimilated := FALSE  #);
+  empty_table : table = [ [i: table_index] empty_descriptor ];
+
+min (a : nat, b: nat): nat = IF  a < b THEN a ELSE b ENDIF;
+  
+add : MODULE = 
+ BEGIN
+ GLOBAL
+  K : nat,
+  old,new :  table_index,
+  ht : table,
+  pc : [0 .. 3]
+ INITIALIZATION
+   pc = 0;
+   K = 32;
+   ht = empty_table;
+   old = 1;
+   new = 1
+TRANSITION
+[ pc = 0 and old /= new and not ht[old].assimilated --> 
+        % moveN    
+        ht' = (ht WITH [new].num_entries := ht[new].num_entries + min (T,ht[old].num_to_migrate)) WITH [old].num_to_migrate := ht[old].num_to_migrate - min (T,ht[old].num_to_migrate) WITH [old].assimilated := (ht[old].num_to_migrate <= T);
+
+
+        % ht'[new].num_entries = ht[new].num_entries + min (T,ht[old].num_to_migrate);
+        % ht'[old].num_to_migrate = ht[old].num_to_migrate - min (T,ht[old].num_to_migrate);
+        % ht'[old].assimilated = (ht'[old].num_to_migrate = 0);
+        pc' = 1
+  []
+  pc = 0 and not( old /= new and not ht[old].assimilated) -->  pc' = 1
+  []
+  pc = 1 -->
+        ht'[new].num_entries = ht[new].num_entries + 1;
+        pc' = 2  
+  []
+  pc = 2 and ht[new].num_entries > THRESHOLD*K and new < N --> 
+       % grow
+       K' = 2 * K;
+       old' = new;
+       new' = new + 1;
+       ht' = (ht WITH [new+1].num_entries := 0) WITH [new+1].num_to_migrate := 0 WITH [new+1].assimilated := FALSE WITH [new].num_to_migrate := ht[new].num_entries;
+
+       % ht'[new+1].num_entries = 0;       
+       % ht'[new+1].num_to_migrate = 0;       
+       % ht'[new+1].assimilated = FALSE;       
+       % ht'[new].num_to_migrate = ht[new].num_entries;       
+       pc' = 3
+  []
+  pc = 2 and not(ht[new].num_entries > THRESHOLD*K and new < N) --> pc' = 3
+  []
+  pc = 3 --> pc' = 0
+]
+
+END;
+
+prop1 : LEMMA add |- G(pc = 3 => (ht[new].num_entries <= THRESHOLD * K));
+prop2 : LEMMA add |- G(pc = 3 => (ht[new].num_entries > THRESHOLD * K));
+prop3 : LEMMA add |- G(pc /= 0);
+prop4 : LEMMA add |- G(pc = 3 => FORALL (i: table_index): i < old => ht[i].assimilated);
+prop5 : LEMMA add |- G(pc = 3 => FORALL (i: table_index): i <= old => ht[i].assimilated);
+END
