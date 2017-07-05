@@ -1,0 +1,66 @@
+- The linked list is an array of size N, where the oldest is the first
+element of the array.
+
+- Each array element contains:
+  + number of entries
+  + number of entries to migrate
+  + Boolean assimilated
+
+- We keep two unsigned integers old and new where new is the last
+  occupied element of the array and old is the penultimate. Initially
+  old = new.
+
+- K: current size of the tables
+
+Operations
+----------
+
+- grow
+- move
+- add
+
+
+grow:
+  - K = 2 * K
+  - create a new table of size K
+  - old = new and new = new + 1
+  - add the new table in the new position
+  - descriptor of the new table:
+    + number of entries = 0
+    + number of entries to migrate = 0
+    + assimilated = false
+  - descriptor of the old table:  
+    + number of entries unchanged
+    + number of entries to migrate = number of entries
+    + assimilated unchanged
+
+moveN: we move N elements simultaneously where N = min(T, old.number
+       of entries to migrate) and T is the tax rate.
+
+  - descriptor of the new table:
+    + number of entries += N
+    + number of entries to migrate unchanged
+    + assimilated unchanged
+  - descriptor of the old table:  
+    + number of entries unchanged
+    + number of entries to migrate -= N
+    + if (number of entries to migrate == 0)
+         assimilated = true
+
+add:
+    if (old != new) and (!old.assimilated) 
+       moveN
+
+    - descriptor of the new table:
+      + number of entries += 1
+      + number of entries to migrate unchanged
+      + assimilated unchanged
+
+    - descriptor of the old: nothing change
+
+    if (number of entries > THRESHOLD * K )
+       grow
+
+
+property 1: new.number of entries <= THRESHOLD * K
+property 2: for all 0 <= i < old . i.assimilated
