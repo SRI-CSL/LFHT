@@ -62,16 +62,13 @@ struct lfht_hdr_s {
 
 
 typedef struct lfht_s {
-  /* the pointer to the current hdr together with it's current state */
+  /* the pointer to the current hdr together with its current state */
   uintptr_t hdr:62, state:2;
   /* 
    * a lock that allows for mutual exclusion when attempting to grow
    * the table or free
    * final segments of old tables in the linked list that have
    * reference count zero.
-   *
-   * it would be nice to eliminate this (but difficult)
-   *
    */
    pthread_mutex_t lock;
 } lfht_t;

@@ -29,19 +29,31 @@
 /*
  * Ian's Tax rate calculation
  *
- * A table grows from N to 2N when there are N/R non-zero keys, where
- * R is the RESIZE_RATIO.  The new table, before it needs to grow, has
- * 2N/R free slots. The N/R key-values in the old table need to be
- * migrated before that happens. So, worst case, in N/R more
- * insertions it will need to grow.  Assuming, the worst case, where
- * there are no TOMBSTONEs anywhere. Thus the tax rate T must be such
- * that N/R * T > N/R.
+ * A table grows from N to 2N when there are at least N*R non-zero
+ * keys, where R is the RESIZE_RATIO. In the worst case, the table may
+ * contain N non-zero keys. This may happen if many threads add entries
+ * to the table concurrently. More precisely, each thread checks whether
+ * the resize threshold is reached *before* doing an addition. So if
+ * N threads add entries concurrently, there may be N new entries in the
+ * table.
  *
- *  So a tax rate > 1 will suffice. We have chosen 3.
+ * The new table will not grow until it contains at least 2N*R keys.
+ * The migration process must then copy at most N keys into the new
+ * table, and complete before there are 2N*R keys in the new table. We
+ * force individual operation on the table to first move M entries
+ * from the old to the new table. In the worst case, an individual
+ * operation will then add (M+1) entries in the new table. Let k be
+ * the number of operations needed to fully migrate the content from
+ * old to new table.  We have: k = N/M, we want: k*(M+1) < 2N*R.
  *
- * iam: revisit this in the light of having many many many threads.
- * It seems like the above logic must be buggy.
+ * N/M * (M + 1) < 2N*R
+ * 1/M * (M + 1) < 2*R
+ *  1 + 1/M < 2*R
+ *      1/M < 2*R - 1
+ *        M > 1/(2*R - 1)
  *
+ * We have R = RESIZE_RATIO = 0.6, so M > 5 works. This also means
+ * the R must be larger than 0.5.
  */
 
 /*

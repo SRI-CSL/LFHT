@@ -1,46 +1,53 @@
+Overview
+--------
+
 Our hash table uses uint64_t keys and values.  We insist on 4 byte
 aligned keys, (if they are pointers they will usually have much
 greater alignment), but 4 is more than we need. (2 byte would be
 enough).
 
-The underlying hash table algorithm we use is linear probing.
+The underlying hash table algorithm we use is linear probing. The
+table grows when it reaches a compile-time threshold (typically about
+60-70% full).
 
-The operations we provide are add (insert or update), remove and find.
-In the typical case none of these operations require obtaining a lock.
-
+The operations we provide are add (insert or update), remove, and find
+a key.  In the typical case, none of these operations require
+obtaining a lock.
 
 The main idea in growing a table will be to maintain a linked list of
 tables, old and new.
 
-handle  ->  new table -> old table -> older table -> ... -> oldest table
+list_header -> new table -> old table -> older table -> ... -> oldest table
 
-we lazily reclaim old tables, when they are no longer in use. Being able
+When a table becomes full, we allocate a larger replacement, add it to
+the front of the linked list, and start migrating entries from
+old_table to the new table. All threads that operate on the table
+contribute to the migration process. Before performing any operation
+(i.e., add, remove, find), each thread must first move a fixed number
+M of key/values pairs from the old table to the new table. When
+migration completes, we say that the old table is *assimilated*. The
+number M is chosen so that a new table cannot become full before the
+old table has been assimilated.
+
+We lazily reclaim old tables when they are no longer in use. Being able
 to say when they are no longer in use is the hardest part of the design.
 
-When an table becomes full, we allocate a larger replacement, add it
-to the front of the "linked list" of tables, and begin the migration
-process. When a thread inserts/updates/finds into the new table it
-must first move a fixed number of key/values pairs from the old table
-to the new table.  This fixed number is chosen so that we maintain the
-invariant that a new table can only become full *after* it has
-completely *assimiliated* the table that it replaces.
 
-So a active table can be in one of three states:
+So an active table can be in one of three states:
 
 0. the current table is the only table.
 
-1. there is more than one table, the current table is new, and it's
+1. there is more than one table, the current table is new, and its
 predecessor still contains key-value pairs that have not yet been
-assimilated into the new table.
+migrated to the new table.
 
-2. there is more than one table, the current table is new, and it's
-predecessor table contains no key-value pairs that have not yet been
-assimilated into the new table.
+2. there is more than one table, the current table is new, and its
+predecessor table is assimilated.
 
 
-So as a first approximation, our hash table will consist of a state and
+So as a first approximation, our hash table consists of a state and
 a pointer to the front of the linked list of tables.  The question
-then, is how can we release old tables? The problem is that, without
+then, is "how can we release old tables?" The problem is that, without
 additional information, there could always be slow threads that wake
 up thinking that the old table is the current active table.
 
@@ -53,3 +60,12 @@ is the active table, and what is the oldest table the thread has
 an active interest in.
 
 
+Data Structures
+---------------
+
+TBD
+
+Pseudo Code
+-----------
+
+TBD
