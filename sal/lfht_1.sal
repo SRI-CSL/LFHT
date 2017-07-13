@@ -1,8 +1,12 @@
 lfht_1: CONTEXT =
 BEGIN
-  N : int = 10;
+  % N : int = 10;
+  % T : int = 6;
+  % THRESHOLD : real = 6/10;
+  N : int = 4;
   T : int = 6;
   THRESHOLD : real = 6/10;
+
   table_index: TYPE = [1 .. N];
   descriptor: TYPE = [# num_entries : nat, num_to_migrate: nat, assimilated : bool #];
   table: TYPE = ARRAY table_index OF descriptor;
@@ -10,6 +14,13 @@ BEGIN
   empty_table : table = [ [i: table_index] empty_descriptor ];
 
 min (a : nat, b: nat): nat = IF  a < b THEN a ELSE b ENDIF;
+
+table_size (i: table_index, k:nat): bool =
+  ((i=1 and k=32) or (i=2 and k=64) or (i=3 and k=128) or (i=4 and k=256));
+
+full_table (i: table_index, k:nat): bool =
+  ((i=1 and k >= 32 * THRESHOLD) or (i=2 and k >= 64 * THRESHOLD) or
+   (i=3 and k >= 128 * THRESHOLD) or (i=4 and k >= 256 * THRESHOLD));
   
 add : MODULE = 
  BEGIN
@@ -54,16 +65,31 @@ TRANSITION
        % ht'[new].num_to_migrate = ht[new].num_entries;       
        pc' = 3
   []
-  pc = 2 and not(ht[new].num_entries > THRESHOLD*K and new < N) --> pc' = 3
+  pc = 2 and ht[new].num_entries <= THRESHOLD*K --> pc' = 3
+  []
+  pc = 2 and ht[new].num_entries > THRESHOLD*K  and new >= N --> pc' = 4
   []
   pc = 3 --> pc' = 0
+  []
+  pc = 4 --> pc' = 4 
 ]
 
 END;
 
+%% PROVED with: sal-inf-bmc -i lfht_1.sal prop1
 prop1 : LEMMA add |- G(pc = 3 => (ht[new].num_entries <= THRESHOLD * K));
+%% DISPROVED
 prop2 : LEMMA add |- G(pc = 3 => (ht[new].num_entries > THRESHOLD * K));
-prop3 : LEMMA add |- G(pc /= 0);
+%% BEGIN PROVED
+lemma1: LEMMA add |- G((new = 1 and old = 1) or (new = old+1));
+lemma2: LEMMA add |- G(FORALL (i: table_index): i > new => ht[i].num_entries = 0 and ht[i].num_to_migrate=0 and not ht[i].assimilated);
+lemma3: LEMMA add |- G(FORALL (i: table_index): ht[i].num_to_migrate <= ht[i].num_entries);
+lemma4: LEMMA add |- G(table_size (new, K));
+lemma5 : LEMMA add |- G(pc =3 => FORALL (i: table_index): (full_table(i, ht[i].num_entries) => (ht[i].num_to_migrate = 0 <=> ht[i].assimilated)) and
+                                                          (not full_table(i, ht[i].num_entries) => not ht[i].assimilated and ht[i].num_to_migrate= 0));
+lemma6: LEMMA add |- G(not ht[old].assimilated => (ht[new].num_entries <= (ht[old].num_entries - ht[old].num_to_migrate) * (1 + 1/T)));
+%% END PROVED
+
+%% CANNOT PROVE with sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal prop4 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5 -l lemma6
 prop4 : LEMMA add |- G(pc = 3 => FORALL (i: table_index): i < old => ht[i].assimilated);
-prop5 : LEMMA add |- G(pc = 3 => FORALL (i: table_index): i <= old => ht[i].assimilated);
 END
