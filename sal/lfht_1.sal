@@ -4,7 +4,7 @@ BEGIN
   % T : int = 6;
   % THRESHOLD : real = 6/10;
   N : int = 4;
-  T : int = 6;
+  T : int = 8;
   THRESHOLD : real = 6/10;
 
   table_index: TYPE = [1 .. N];
@@ -21,7 +21,14 @@ table_size (i: table_index, k:nat): bool =
 full_table (i: table_index, k:nat): bool =
   ((i=1 and k >= 32 * THRESHOLD) or (i=2 and k >= 64 * THRESHOLD) or
    (i=3 and k >= 128 * THRESHOLD) or (i=4 and k >= 256 * THRESHOLD));
-  
+
+max_size(i: table_index): nat =
+  IF i=1 THEN 32
+  ELSIF i=2 THEN 64
+  ELSIF i=3 THEN 128
+  ELSE 256
+  ENDIF;
+
 add : MODULE = 
  BEGIN
  GLOBAL
@@ -88,8 +95,11 @@ lemma4: LEMMA add |- G(table_size (new, K));
 lemma5 : LEMMA add |- G(pc =3 => FORALL (i: table_index): (full_table(i, ht[i].num_entries) => (ht[i].num_to_migrate = 0 <=> ht[i].assimilated)) and
                                                           (not full_table(i, ht[i].num_entries) => not ht[i].assimilated and ht[i].num_to_migrate= 0));
 lemma6: LEMMA add |- G(not ht[old].assimilated => (ht[new].num_entries <= (ht[old].num_entries - ht[old].num_to_migrate) * (1 + 1/T)));
+
+lemma7: LEMMA add |- G(FORALL (i: table_index): ht[i].num_entries <= max_size(i));
+
 %% END PROVED
 
-%% CANNOT PROVE with sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal prop4 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5 -l lemma6
+%% PROVE with sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal prop4 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5 -l lemma6 -l lemma7
 prop4 : LEMMA add |- G(pc = 3 => FORALL (i: table_index): i < old => ht[i].assimilated);
 END
