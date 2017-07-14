@@ -3,7 +3,7 @@ BEGIN
   % N : int = 10;
   % T : int = 6;
   % THRESHOLD : real = 6/10;
-  N : int = 4;
+  N : int = 6;
   T : int = 8;
   THRESHOLD : real = 6/10;
 
@@ -16,17 +16,21 @@ BEGIN
 min (a : nat, b: nat): nat = IF  a < b THEN a ELSE b ENDIF;
 
 table_size (i: table_index, k:nat): bool =
-  ((i=1 and k=32) or (i=2 and k=64) or (i=3 and k=128) or (i=4 and k=256));
+  (i=1 and k=32) or (i=2 and k=64) or (i=3 and k=128) or (i=4 and k=256) or
+  (i=5 AND k=512) or (i=6 AND k=1024);
 
 full_table (i: table_index, k:nat): bool =
-  ((i=1 and k >= 32 * THRESHOLD) or (i=2 and k >= 64 * THRESHOLD) or
-   (i=3 and k >= 128 * THRESHOLD) or (i=4 and k >= 256 * THRESHOLD));
+  (i=1 and k >= 32 * THRESHOLD) or  (i=2 and k >= 64 * THRESHOLD) or
+  (i=3 and k >= 128 * THRESHOLD) or (i=4 and k >= 256 * THRESHOLD) or
+  (i=5 and k >= 512 * THRESHOLD) or (i=6 and k >= 1024 * THRESHOLD) ;
 
 max_size(i: table_index): nat =
   IF i=1 THEN 32
   ELSIF i=2 THEN 64
   ELSIF i=3 THEN 128
-  ELSE 256
+  ELSIF i=4 THEN 256
+  ELSIF i=5 THEN 512
+  ELSE 1024
   ENDIF;
 
 add : MODULE = 
@@ -88,18 +92,30 @@ prop1 : LEMMA add |- G(pc = 3 => (ht[new].num_entries <= THRESHOLD * K));
 %% DISPROVED
 prop2 : LEMMA add |- G(pc = 3 => (ht[new].num_entries > THRESHOLD * K));
 %% BEGIN PROVED
+
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal lemma1
 lemma1: LEMMA add |- G((new = 1 and old = 1) or (new = old+1));
+
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal lemma2
 lemma2: LEMMA add |- G(FORALL (i: table_index): i > new => ht[i].num_entries = 0 and ht[i].num_to_migrate=0 and not ht[i].assimilated);
+
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal lemma3
 lemma3: LEMMA add |- G(FORALL (i: table_index): ht[i].num_to_migrate <= ht[i].num_entries);
+
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal lemma4
 lemma4: LEMMA add |- G(table_size (new, K));
+
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal lemma5 -l lemma4
 lemma5 : LEMMA add |- G(pc =3 => FORALL (i: table_index): (full_table(i, ht[i].num_entries) => (ht[i].num_to_migrate = 0 <=> ht[i].assimilated)) and
                                                           (not full_table(i, ht[i].num_entries) => not ht[i].assimilated and ht[i].num_to_migrate= 0));
+
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal lemma6 -l lemma5
 lemma6: LEMMA add |- G(not ht[old].assimilated => (ht[new].num_entries <= (ht[old].num_entries - ht[old].num_to_migrate) * (1 + 1/T)));
 
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_a.sal lemma7 -l lemma4
 lemma7: LEMMA add |- G(FORALL (i: table_index): ht[i].num_entries <= max_size(i));
 
-%% END PROVED
-
-%% PROVE with sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal prop4 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5 -l lemma6 -l lemma7
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal prop4 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5 -l lemma6 -l lemma7
 prop4 : LEMMA add |- G(pc = 3 => FORALL (i: table_index): i < old => ht[i].assimilated);
+
 END
