@@ -109,13 +109,15 @@ lemma4: LEMMA add |- G(table_size (new, K));
 lemma5 : LEMMA add |- G(pc =3 => FORALL (i: table_index): (full_table(i, ht[i].num_entries) => (ht[i].num_to_migrate = 0 <=> ht[i].assimilated)) and
                                                           (not full_table(i, ht[i].num_entries) => not ht[i].assimilated and ht[i].num_to_migrate= 0));
 
-% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal lemma6 -l lemma5
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal lemma6 
 lemma6: LEMMA add |- G(not ht[old].assimilated => (ht[new].num_entries <= (ht[old].num_entries - ht[old].num_to_migrate) * (1 + 1/T)));
 
-% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_a.sal lemma7 -l lemma4
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal lemma7 -l lemma4
 lemma7: LEMMA add |- G(FORALL (i: table_index): ht[i].num_entries <= max_size(i));
 
 % sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal prop4 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5 -l lemma6 -l lemma7
+% This command also proves the property:
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_1.sal prop4 -l lemma1 -l lemma4 -l lemma6 -l lemma7
 prop4 : LEMMA add |- G(pc = 3 => FORALL (i: table_index): i < old => ht[i].assimilated);
 
 END

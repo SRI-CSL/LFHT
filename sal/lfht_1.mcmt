@@ -1,0 +1,989 @@
+;; pc has type (subrange 0 3)
+;; old, new have type table_index
+(define-state-type state
+     ((K Real)
+      (old Real)
+      (new Real)
+      (ht!0!assimilated Bool)
+      (ht!0!num_entries Real)
+      (ht!0!num_to_migrate Real)
+      (ht!1!assimilated Bool)
+      (ht!1!num_entries Real)
+      (ht!1!num_to_migrate Real)
+      (ht!2!assimilated Bool)
+      (ht!2!num_entries Real)
+      (ht!2!num_to_migrate Real)
+      (ht!3!assimilated Bool)
+      (ht!3!num_entries Real)
+      (ht!3!num_to_migrate Real)
+      (ht!4!assimilated Bool)
+      (ht!4!num_entries Real)
+      (ht!4!num_to_migrate Real)
+      (ht!5!assimilated Bool)
+      (ht!5!num_entries Real)
+      (ht!5!num_to_migrate Real)
+      (pc Real)))
+
+
+(define-states initial_states state
+	(and
+          (= pc 0)
+          (= K 32)
+          (= ht!0!assimilated false)
+          (= ht!0!num_entries 0)
+          (= ht!0!num_to_migrate 0)
+          (= ht!1!assimilated false)
+          (= ht!1!num_entries 0)
+          (= ht!1!num_to_migrate 0)
+          (= ht!2!assimilated false)
+          (= ht!2!num_entries 0)
+          (= ht!2!num_to_migrate 0)
+          (= ht!3!assimilated false)
+          (= ht!3!num_entries 0)
+          (= ht!3!num_to_migrate 0)
+          (= ht!4!assimilated false)
+          (= ht!4!num_entries 0)
+          (= ht!4!num_to_migrate 0)
+          (= ht!5!assimilated false)
+          (= ht!5!num_entries 0)
+          (= ht!5!num_to_migrate 0)
+          (= old 1)
+          (= new 1)))
+
+(define-transition transition state
+        (let ((cs!90 (+ new 1))
+              (cond!1 (= new 2))
+              (cond!2 (= new 3))
+              (cond!3 (= new 4))
+              (cond!4 (= new 5))
+              (cond!5 (= new 6))
+              (cond!6 (= old 2))
+              (cond!7 (= old 3))
+              (cond!8 (= old 4))
+              (cond!9 (= old 5))
+              (cond!10 (= old 6))
+              (cond!34 (= new 1))
+              (cond!35 (= new 2))
+              (cond!36 (= new 3))
+              (cond!37 (= new 4))
+              (cond!38 (= new 5))
+              (cond!39 (= new 6))
+              (cs!154 (= pc 0))
+              (cs!156 (= pc' 1))
+              (cs!175 (= pc' 3))
+              (cs!176 (= pc 2))
+              (cs!178 (< new 6))
+              (cond!51 (= old 2))
+              (cond!52 (= old 3))
+              (cond!53 (= old 4))
+              (cond!54 (= old 5))
+              (cond!55 (= old 6))
+              (cs!182 (= pc' 4))
+              (cs!183 (= K' K))
+              (cs!184
+                    (and
+                      (= ht!0!assimilated' ht!0!assimilated)
+                      (= ht!0!num_entries' ht!0!num_entries)
+                      (= ht!0!num_to_migrate' ht!0!num_to_migrate)
+                      (= ht!1!assimilated' ht!1!assimilated)
+                      (= ht!1!num_entries' ht!1!num_entries)
+                      (= ht!1!num_to_migrate' ht!1!num_to_migrate)
+                      (= ht!2!assimilated' ht!2!assimilated)
+                      (= ht!2!num_entries' ht!2!num_entries)
+                      (= ht!2!num_to_migrate' ht!2!num_to_migrate)
+                      (= ht!3!assimilated' ht!3!assimilated)
+                      (= ht!3!num_entries' ht!3!num_entries)
+                      (= ht!3!num_to_migrate' ht!3!num_to_migrate)
+                      (= ht!4!assimilated' ht!4!assimilated)
+                      (= ht!4!num_entries' ht!4!num_entries)
+                      (= ht!4!num_to_migrate' ht!4!num_to_migrate)
+                      (= ht!5!assimilated' ht!5!assimilated)
+                      (= ht!5!num_entries' ht!5!num_entries)
+                      (= ht!5!num_to_migrate' ht!5!num_to_migrate)))
+              (cs!185 (= new' new))
+              (cs!186 (= old' old))
+              (cond!57 (= old 1))
+              (cond!58 (= old 2))
+              (cond!59 (= old 3))
+              (cond!60 (= old 4))
+              (cond!61 (= old 5))
+              (cond!62 (= old 6))
+              (cond!63 (= old 1))
+              (cond!64 (= old 2))
+              (cond!65 (= old 3))
+              (cond!66 (= old 4))
+              (cond!67 (= old 5))
+              (cond!68 (= old 6))
+              (cond!69 (= new 1))
+              (cond!70 (= new 2))
+              (cond!71 (= new 3))
+              (cond!72 (= new 4))
+              (cond!73 (= new 5))
+              (cond!74 (= new 6))
+              (cond!75 (= new 2))
+              (cond!76 (= new 3))
+              (cond!77 (= new 4))
+              (cond!78 (= new 5))
+              (cond!79 (= new 6))
+              (cond!80 (= new 1))
+              (cond!81 (= new 2))
+              (cond!82 (= new 3))
+              (cond!83 (= new 4))
+              (cond!84 (= new 5))
+              (cond!85 (= new 6)))
+          (let ((cs!91
+                    (cond
+                      (cond!5 ht!5!assimilated)
+                      (cond!4 ht!4!assimilated)
+                      (cond!3 ht!3!assimilated)
+                      (cond!2 ht!2!assimilated)
+                      (cond!1 ht!1!assimilated)
+                      (else ht!0!assimilated)))
+                (cs!93
+                     (cond
+                       (cond!5 ht!5!num_to_migrate)
+                       (cond!4 ht!4!num_to_migrate)
+                       (cond!3 ht!3!num_to_migrate)
+                       (cond!2 ht!2!num_to_migrate)
+                       (cond!1 ht!1!num_to_migrate)
+                       (else ht!0!num_to_migrate)))
+                (cond!11 (= cs!90 2))
+                (cond!12 (= cs!90 3))
+                (cond!13 (= cs!90 4))
+                (cond!14 (= cs!90 5))
+                (cond!15 (= cs!90 6))
+                (cond!16 (= cs!90 1))
+                (cond!17 (= cs!90 2))
+                (cond!18 (= cs!90 3))
+                (cond!19 (= cs!90 4))
+                (cond!20 (= cs!90 5))
+                (cond!21 (= cs!90 6))
+                (cond!22 (= cs!90 2))
+                (cond!23 (= cs!90 3))
+                (cond!24 (= cs!90 4))
+                (cond!25 (= cs!90 5))
+                (cond!26 (= cs!90 6))
+                (cond!27 (= cs!90 1))
+                (cond!28 (= cs!90 2))
+                (cond!29 (= cs!90 3))
+                (cond!30 (= cs!90 4))
+                (cond!31 (= cs!90 5))
+                (cond!32 (= cs!90 6))
+                (cond!40 (= cs!90 2))
+                (cond!41 (= cs!90 3))
+                (cond!42 (= cs!90 4))
+                (cond!43 (= cs!90 5))
+                (cond!44 (= cs!90 6))
+                (cond!45 (= cs!90 1))
+                (cond!46 (= cs!90 2))
+                (cond!47 (= cs!90 3))
+                (cond!48 (= cs!90 4))
+                (cond!49 (= cs!90 5))
+                (cond!50 (= cs!90 6)))
+            (let ((cs!97
+                      (ite cond!16
+                        (cond
+                          (cond!15 ht!5!assimilated)
+                          (cond!14 ht!4!assimilated)
+                          (cond!13 ht!3!assimilated)
+                          (cond!12 ht!2!assimilated)
+                          (cond!11 ht!1!assimilated)
+                          (else ht!0!assimilated))
+                        ht!0!assimilated))
+                  (cs!98 (ite cond!16 0 ht!0!num_entries))
+                  (cs!100
+                        (ite cond!17
+                          (cond
+                            (cond!15 ht!5!assimilated)
+                            (cond!14 ht!4!assimilated)
+                            (cond!13 ht!3!assimilated)
+                            (cond!12 ht!2!assimilated)
+                            (cond!11 ht!1!assimilated)
+                            (else ht!0!assimilated))
+                          ht!1!assimilated))
+                  (cs!101 (ite cond!17 0 ht!1!num_entries))
+                  (cs!103
+                        (ite cond!18
+                          (cond
+                            (cond!15 ht!5!assimilated)
+                            (cond!14 ht!4!assimilated)
+                            (cond!13 ht!3!assimilated)
+                            (cond!12 ht!2!assimilated)
+                            (cond!11 ht!1!assimilated)
+                            (else ht!0!assimilated))
+                          ht!2!assimilated))
+                  (cs!104 (ite cond!18 0 ht!2!num_entries))
+                  (cs!106
+                        (ite cond!19
+                          (cond
+                            (cond!15 ht!5!assimilated)
+                            (cond!14 ht!4!assimilated)
+                            (cond!13 ht!3!assimilated)
+                            (cond!12 ht!2!assimilated)
+                            (cond!11 ht!1!assimilated)
+                            (else ht!0!assimilated))
+                          ht!3!assimilated))
+                  (cs!107 (ite cond!19 0 ht!3!num_entries))
+                  (cs!109
+                        (ite cond!20
+                          (cond
+                            (cond!15 ht!5!assimilated)
+                            (cond!14 ht!4!assimilated)
+                            (cond!13 ht!3!assimilated)
+                            (cond!12 ht!2!assimilated)
+                            (cond!11 ht!1!assimilated)
+                            (else ht!0!assimilated))
+                          ht!4!assimilated))
+                  (cs!110 (ite cond!20 0 ht!4!num_entries))
+                  (cs!112
+                        (ite cond!21
+                          (cond
+                            (cond!15 ht!5!assimilated)
+                            (cond!14 ht!4!assimilated)
+                            (cond!13 ht!3!assimilated)
+                            (cond!12 ht!2!assimilated)
+                            (cond!11 ht!1!assimilated)
+                            (else ht!0!assimilated))
+                          ht!5!assimilated))
+                  (cs!113 (ite cond!21 0 ht!5!num_entries))
+                  (cs!115
+                        (cond
+                          (cond!5 ht!5!num_entries)
+                          (cond!4 ht!4!num_entries)
+                          (cond!3 ht!3!num_entries)
+                          (cond!2 ht!2!num_entries)
+                          (cond!1 ht!1!num_entries)
+                          (else ht!0!num_entries)))
+                  (cs!116
+                        (cond
+                          (cond!10 ht!5!num_to_migrate)
+                          (cond!9 ht!4!num_to_migrate)
+                          (cond!8 ht!3!num_to_migrate)
+                          (cond!7 ht!2!num_to_migrate)
+                          (cond!6 ht!1!num_to_migrate)
+                          (else ht!0!num_to_migrate)))
+                  (cs!136 (ite cond!34 cs!91 ht!0!assimilated))
+                  (cs!139 (ite cond!35 cs!91 ht!1!assimilated))
+                  (cs!142 (ite cond!36 cs!91 ht!2!assimilated))
+                  (cs!145 (ite cond!37 cs!91 ht!3!assimilated))
+                  (cs!148 (ite cond!38 cs!91 ht!4!assimilated))
+                  (cs!151 (ite cond!39 cs!91 ht!5!assimilated))
+                  (cs!155
+                        (cond
+                          (cond!10 ht!5!assimilated)
+                          (cond!9 ht!4!assimilated)
+                          (cond!8 ht!3!assimilated)
+                          (cond!7 ht!2!assimilated)
+                          (cond!6 ht!1!assimilated)
+                          (else ht!0!assimilated))))
+              (let ((cs!118
+                         (ite cond!27
+                           (cond
+                             (cond!26 cs!113)
+                             (cond!25 cs!110)
+                             (cond!24 cs!107)
+                             (cond!23 cs!104)
+                             (cond!22 cs!101)
+                             (else cs!98))
+                           cs!98))
+                    (cs!119
+                          (cond
+                            (cond!27 0)
+                            (cond!16
+                              (cond
+                                (cond!15 ht!5!num_to_migrate)
+                                (cond!14 ht!4!num_to_migrate)
+                                (cond!13 ht!3!num_to_migrate)
+                                (cond!12 ht!2!num_to_migrate)
+                                (cond!11 ht!1!num_to_migrate)
+                                (else ht!0!num_to_migrate)))
+                            (else ht!0!num_to_migrate)))
+                    (cs!121
+                          (ite cond!28
+                            (cond
+                              (cond!26 cs!113)
+                              (cond!25 cs!110)
+                              (cond!24 cs!107)
+                              (cond!23 cs!104)
+                              (cond!22 cs!101)
+                              (else cs!98))
+                            cs!101))
+                    (cs!122
+                          (cond
+                            (cond!28 0)
+                            (cond!17
+                              (cond
+                                (cond!15 ht!5!num_to_migrate)
+                                (cond!14 ht!4!num_to_migrate)
+                                (cond!13 ht!3!num_to_migrate)
+                                (cond!12 ht!2!num_to_migrate)
+                                (cond!11 ht!1!num_to_migrate)
+                                (else ht!0!num_to_migrate)))
+                            (else ht!1!num_to_migrate)))
+                    (cs!124
+                          (ite cond!29
+                            (cond
+                              (cond!26 cs!113)
+                              (cond!25 cs!110)
+                              (cond!24 cs!107)
+                              (cond!23 cs!104)
+                              (cond!22 cs!101)
+                              (else cs!98))
+                            cs!104))
+                    (cs!125
+                          (cond
+                            (cond!29 0)
+                            (cond!18
+                              (cond
+                                (cond!15 ht!5!num_to_migrate)
+                                (cond!14 ht!4!num_to_migrate)
+                                (cond!13 ht!3!num_to_migrate)
+                                (cond!12 ht!2!num_to_migrate)
+                                (cond!11 ht!1!num_to_migrate)
+                                (else ht!0!num_to_migrate)))
+                            (else ht!2!num_to_migrate)))
+                    (cs!127
+                          (ite cond!30
+                            (cond
+                              (cond!26 cs!113)
+                              (cond!25 cs!110)
+                              (cond!24 cs!107)
+                              (cond!23 cs!104)
+                              (cond!22 cs!101)
+                              (else cs!98))
+                            cs!107))
+                    (cs!128
+                          (cond
+                            (cond!30 0)
+                            (cond!19
+                              (cond
+                                (cond!15 ht!5!num_to_migrate)
+                                (cond!14 ht!4!num_to_migrate)
+                                (cond!13 ht!3!num_to_migrate)
+                                (cond!12 ht!2!num_to_migrate)
+                                (cond!11 ht!1!num_to_migrate)
+                                (else ht!0!num_to_migrate)))
+                            (else ht!3!num_to_migrate)))
+                    (cs!130
+                          (ite cond!31
+                            (cond
+                              (cond!26 cs!113)
+                              (cond!25 cs!110)
+                              (cond!24 cs!107)
+                              (cond!23 cs!104)
+                              (cond!22 cs!101)
+                              (else cs!98))
+                            cs!110))
+                    (cs!131
+                          (cond
+                            (cond!31 0)
+                            (cond!20
+                              (cond
+                                (cond!15 ht!5!num_to_migrate)
+                                (cond!14 ht!4!num_to_migrate)
+                                (cond!13 ht!3!num_to_migrate)
+                                (cond!12 ht!2!num_to_migrate)
+                                (cond!11 ht!1!num_to_migrate)
+                                (else ht!0!num_to_migrate)))
+                            (else ht!4!num_to_migrate)))
+                    (cs!133
+                          (ite cond!32
+                            (cond
+                              (cond!26 cs!113)
+                              (cond!25 cs!110)
+                              (cond!24 cs!107)
+                              (cond!23 cs!104)
+                              (cond!22 cs!101)
+                              (else cs!98))
+                            cs!113))
+                    (cs!134
+                          (cond
+                            (cond!32 0)
+                            (cond!21
+                              (cond
+                                (cond!15 ht!5!num_to_migrate)
+                                (cond!14 ht!4!num_to_migrate)
+                                (cond!13 ht!3!num_to_migrate)
+                                (cond!12 ht!2!num_to_migrate)
+                                (cond!11 ht!1!num_to_migrate)
+                                (else ht!0!num_to_migrate)))
+                            (else ht!5!num_to_migrate)))
+                    (cs!135 (<= cs!115 (* K (/ 3 5))))
+                    (cond!33 (< 8 cs!116))
+                    (cs!179
+                          (cond
+                            (cond!55 cs!151)
+                            (cond!54 cs!148)
+                            (cond!53 cs!145)
+                            (cond!52 cs!142)
+                            (cond!51 cs!139)
+                            (else cs!136))))
+                (let ((cs!137
+                           (ite cond!34
+                             (+ cs!115 (ite cond!33 8 cs!116))
+                             ht!0!num_entries))
+                      (cs!140
+                            (ite cond!35
+                              (+ cs!115 (ite cond!33 8 cs!116))
+                              ht!1!num_entries))
+                      (cs!143
+                            (ite cond!36
+                              (+ cs!115 (ite cond!33 8 cs!116))
+                              ht!2!num_entries))
+                      (cs!146
+                            (ite cond!37
+                              (+ cs!115 (ite cond!33 8 cs!116))
+                              ht!3!num_entries))
+                      (cs!149
+                            (ite cond!38
+                              (+ cs!115 (ite cond!33 8 cs!116))
+                              ht!4!num_entries))
+                      (cs!152
+                            (ite cond!39
+                              (+ cs!115 (ite cond!33 8 cs!116))
+                              ht!5!num_entries))
+                      (cs!157
+                            (and
+                              (not cond!45)
+                              (ite cond!27
+                                (cond
+                                  (cond!26 cs!112)
+                                  (cond!25 cs!109)
+                                  (cond!24 cs!106)
+                                  (cond!23 cs!103)
+                                  (cond!22 cs!100)
+                                  (else cs!97))
+                                cs!97)))
+                      (cs!158
+                            (ite cond!45
+                              (cond
+                                (cond!44 cs!133)
+                                (cond!43 cs!130)
+                                (cond!42 cs!127)
+                                (cond!41 cs!124)
+                                (cond!40 cs!121)
+                                (else cs!118))
+                              cs!118))
+                      (cs!160
+                            (and
+                              (not cond!46)
+                              (ite cond!28
+                                (cond
+                                  (cond!26 cs!112)
+                                  (cond!25 cs!109)
+                                  (cond!24 cs!106)
+                                  (cond!23 cs!103)
+                                  (cond!22 cs!100)
+                                  (else cs!97))
+                                cs!100)))
+                      (cs!161
+                            (ite cond!46
+                              (cond
+                                (cond!44 cs!133)
+                                (cond!43 cs!130)
+                                (cond!42 cs!127)
+                                (cond!41 cs!124)
+                                (cond!40 cs!121)
+                                (else cs!118))
+                              cs!121))
+                      (cs!163
+                            (and
+                              (not cond!47)
+                              (ite cond!29
+                                (cond
+                                  (cond!26 cs!112)
+                                  (cond!25 cs!109)
+                                  (cond!24 cs!106)
+                                  (cond!23 cs!103)
+                                  (cond!22 cs!100)
+                                  (else cs!97))
+                                cs!103)))
+                      (cs!164
+                            (ite cond!47
+                              (cond
+                                (cond!44 cs!133)
+                                (cond!43 cs!130)
+                                (cond!42 cs!127)
+                                (cond!41 cs!124)
+                                (cond!40 cs!121)
+                                (else cs!118))
+                              cs!124))
+                      (cs!166
+                            (and
+                              (not cond!48)
+                              (ite cond!30
+                                (cond
+                                  (cond!26 cs!112)
+                                  (cond!25 cs!109)
+                                  (cond!24 cs!106)
+                                  (cond!23 cs!103)
+                                  (cond!22 cs!100)
+                                  (else cs!97))
+                                cs!106)))
+                      (cs!167
+                            (ite cond!48
+                              (cond
+                                (cond!44 cs!133)
+                                (cond!43 cs!130)
+                                (cond!42 cs!127)
+                                (cond!41 cs!124)
+                                (cond!40 cs!121)
+                                (else cs!118))
+                              cs!127))
+                      (cs!169
+                            (and
+                              (not cond!49)
+                              (ite cond!31
+                                (cond
+                                  (cond!26 cs!112)
+                                  (cond!25 cs!109)
+                                  (cond!24 cs!106)
+                                  (cond!23 cs!103)
+                                  (cond!22 cs!100)
+                                  (else cs!97))
+                                cs!109)))
+                      (cs!170
+                            (ite cond!49
+                              (cond
+                                (cond!44 cs!133)
+                                (cond!43 cs!130)
+                                (cond!42 cs!127)
+                                (cond!41 cs!124)
+                                (cond!40 cs!121)
+                                (else cs!118))
+                              cs!130))
+                      (cs!172
+                            (and
+                              (not cond!50)
+                              (ite cond!32
+                                (cond
+                                  (cond!26 cs!112)
+                                  (cond!25 cs!109)
+                                  (cond!24 cs!106)
+                                  (cond!23 cs!103)
+                                  (cond!22 cs!100)
+                                  (else cs!97))
+                                cs!112)))
+                      (cs!173
+                            (ite cond!50
+                              (cond
+                                (cond!44 cs!133)
+                                (cond!43 cs!130)
+                                (cond!42 cs!127)
+                                (cond!41 cs!124)
+                                (cond!40 cs!121)
+                                (else cs!118))
+                              cs!133))
+                      (cs!177 (not cs!135))
+                      (cs!181 (- cs!116 (ite (< 8 cs!116) 8 cs!116))))
+                  (let ((cs!180
+                             (cond
+                               (cond!55 cs!152)
+                               (cond!54 cs!149)
+                               (cond!53 cs!146)
+                               (cond!52 cs!143)
+                               (cond!51 cs!140)
+                               (else cs!137))))
+                    (or
+                      (and
+                        cs!154
+                        (/= old new)
+                        (not cs!155)
+                        (=
+                          ht!0!assimilated'
+                          (cond
+                            (cond!63 (<= cs!116 8))
+                            (cond!57 cs!179)
+                            (else cs!136)))
+                        (=
+                          ht!0!num_entries'
+                          (cond (cond!63 cs!180) (cond!57 cs!180) (else cs!137)))
+                        (=
+                          ht!0!num_to_migrate'
+                          (cond
+                            (cond!63 cs!181)
+                            (cond!57 cs!181)
+                            (cond!34 cs!93)
+                            (else ht!0!num_to_migrate)))
+                        (=
+                          ht!1!assimilated'
+                          (cond
+                            (cond!64 (<= cs!116 8))
+                            (cond!58 cs!179)
+                            (else cs!139)))
+                        (=
+                          ht!1!num_entries'
+                          (cond (cond!64 cs!180) (cond!58 cs!180) (else cs!140)))
+                        (=
+                          ht!1!num_to_migrate'
+                          (cond
+                            (cond!64 cs!181)
+                            (cond!58 cs!181)
+                            (cond!35 cs!93)
+                            (else ht!1!num_to_migrate)))
+                        (=
+                          ht!2!assimilated'
+                          (cond
+                            (cond!65 (<= cs!116 8))
+                            (cond!59 cs!179)
+                            (else cs!142)))
+                        (=
+                          ht!2!num_entries'
+                          (cond (cond!65 cs!180) (cond!59 cs!180) (else cs!143)))
+                        (=
+                          ht!2!num_to_migrate'
+                          (cond
+                            (cond!65 cs!181)
+                            (cond!59 cs!181)
+                            (cond!36 cs!93)
+                            (else ht!2!num_to_migrate)))
+                        (=
+                          ht!3!assimilated'
+                          (cond
+                            (cond!66 (<= cs!116 8))
+                            (cond!60 cs!179)
+                            (else cs!145)))
+                        (=
+                          ht!3!num_entries'
+                          (cond (cond!66 cs!180) (cond!60 cs!180) (else cs!146)))
+                        (=
+                          ht!3!num_to_migrate'
+                          (cond
+                            (cond!66 cs!181)
+                            (cond!60 cs!181)
+                            (cond!37 cs!93)
+                            (else ht!3!num_to_migrate)))
+                        (=
+                          ht!4!assimilated'
+                          (cond
+                            (cond!67 (<= cs!116 8))
+                            (cond!61 cs!179)
+                            (else cs!148)))
+                        (=
+                          ht!4!num_entries'
+                          (cond (cond!67 cs!180) (cond!61 cs!180) (else cs!149)))
+                        (=
+                          ht!4!num_to_migrate'
+                          (cond
+                            (cond!67 cs!181)
+                            (cond!61 cs!181)
+                            (cond!38 cs!93)
+                            (else ht!4!num_to_migrate)))
+                        (=
+                          ht!5!assimilated'
+                          (cond
+                            (cond!68 (<= cs!116 8))
+                            (cond!62 cs!179)
+                            (else cs!151)))
+                        (=
+                          ht!5!num_entries'
+                          (cond (cond!68 cs!180) (cond!62 cs!180) (else cs!152)))
+                        (=
+                          ht!5!num_to_migrate'
+                          (cond
+                            (cond!68 cs!181)
+                            (cond!62 cs!181)
+                            (cond!39 cs!93)
+                            (else ht!5!num_to_migrate)))
+                        cs!156
+                        cs!183
+                        cs!185
+                        cs!186)
+                      (and
+                        cs!154
+                        (or (= old new) cs!155)
+                        cs!156
+                        cs!183
+                        cs!184
+                        cs!185
+                        cs!186)
+                      (and
+                        (= pc 1)
+                        (= pc' 2)
+                        cs!183
+                        (= ht!0!assimilated' (ite cond!69 cs!91 ht!0!assimilated))
+                        (=
+                          ht!0!num_entries'
+                          (ite cond!69 (+ cs!115 1) ht!0!num_entries))
+                        (=
+                          ht!0!num_to_migrate'
+                          (ite cond!69 cs!93 ht!0!num_to_migrate))
+                        (= ht!1!assimilated' (ite cond!70 cs!91 ht!1!assimilated))
+                        (=
+                          ht!1!num_entries'
+                          (ite cond!70 (+ cs!115 1) ht!1!num_entries))
+                        (=
+                          ht!1!num_to_migrate'
+                          (ite cond!70 cs!93 ht!1!num_to_migrate))
+                        (= ht!2!assimilated' (ite cond!71 cs!91 ht!2!assimilated))
+                        (=
+                          ht!2!num_entries'
+                          (ite cond!71 (+ cs!115 1) ht!2!num_entries))
+                        (=
+                          ht!2!num_to_migrate'
+                          (ite cond!71 cs!93 ht!2!num_to_migrate))
+                        (= ht!3!assimilated' (ite cond!72 cs!91 ht!3!assimilated))
+                        (=
+                          ht!3!num_entries'
+                          (ite cond!72 (+ cs!115 1) ht!3!num_entries))
+                        (=
+                          ht!3!num_to_migrate'
+                          (ite cond!72 cs!93 ht!3!num_to_migrate))
+                        (= ht!4!assimilated' (ite cond!73 cs!91 ht!4!assimilated))
+                        (=
+                          ht!4!num_entries'
+                          (ite cond!73 (+ cs!115 1) ht!4!num_entries))
+                        (=
+                          ht!4!num_to_migrate'
+                          (ite cond!73 cs!93 ht!4!num_to_migrate))
+                        (= ht!5!assimilated' (ite cond!74 cs!91 ht!5!assimilated))
+                        (=
+                          ht!5!num_entries'
+                          (ite cond!74 (+ cs!115 1) ht!5!num_entries))
+                        (=
+                          ht!5!num_to_migrate'
+                          (ite cond!74 cs!93 ht!5!num_to_migrate))
+                        cs!185
+                        cs!186)
+                      (and
+                        cs!176
+                        cs!177
+                        cs!178
+                        (= K' (* K 2))
+                        (= old' new)
+                        (= new' cs!90)
+                        (=
+                          ht!0!assimilated'
+                          (ite cond!80
+                            (cond
+                              (cond!79 cs!172)
+                              (cond!78 cs!169)
+                              (cond!77 cs!166)
+                              (cond!76 cs!163)
+                              (cond!75 cs!160)
+                              (else cs!157))
+                            cs!157))
+                        (=
+                          ht!0!num_entries'
+                          (ite cond!80
+                            (cond
+                              (cond!79 cs!173)
+                              (cond!78 cs!170)
+                              (cond!77 cs!167)
+                              (cond!76 cs!164)
+                              (cond!75 cs!161)
+                              (else cs!158))
+                            cs!158))
+                        (=
+                          ht!0!num_to_migrate'
+                          (cond
+                            (cond!80 cs!115)
+                            (cond!45
+                              (cond
+                                (cond!44 cs!134)
+                                (cond!43 cs!131)
+                                (cond!42 cs!128)
+                                (cond!41 cs!125)
+                                (cond!40 cs!122)
+                                (else cs!119)))
+                            (else cs!119)))
+                        (=
+                          ht!1!assimilated'
+                          (ite cond!81
+                            (cond
+                              (cond!79 cs!172)
+                              (cond!78 cs!169)
+                              (cond!77 cs!166)
+                              (cond!76 cs!163)
+                              (cond!75 cs!160)
+                              (else cs!157))
+                            cs!160))
+                        (=
+                          ht!1!num_entries'
+                          (ite cond!81
+                            (cond
+                              (cond!79 cs!173)
+                              (cond!78 cs!170)
+                              (cond!77 cs!167)
+                              (cond!76 cs!164)
+                              (cond!75 cs!161)
+                              (else cs!158))
+                            cs!161))
+                        (=
+                          ht!1!num_to_migrate'
+                          (cond
+                            (cond!81 cs!115)
+                            (cond!46
+                              (cond
+                                (cond!44 cs!134)
+                                (cond!43 cs!131)
+                                (cond!42 cs!128)
+                                (cond!41 cs!125)
+                                (cond!40 cs!122)
+                                (else cs!119)))
+                            (else cs!122)))
+                        (=
+                          ht!2!assimilated'
+                          (ite cond!82
+                            (cond
+                              (cond!79 cs!172)
+                              (cond!78 cs!169)
+                              (cond!77 cs!166)
+                              (cond!76 cs!163)
+                              (cond!75 cs!160)
+                              (else cs!157))
+                            cs!163))
+                        (=
+                          ht!2!num_entries'
+                          (ite cond!82
+                            (cond
+                              (cond!79 cs!173)
+                              (cond!78 cs!170)
+                              (cond!77 cs!167)
+                              (cond!76 cs!164)
+                              (cond!75 cs!161)
+                              (else cs!158))
+                            cs!164))
+                        (=
+                          ht!2!num_to_migrate'
+                          (cond
+                            (cond!82 cs!115)
+                            (cond!47
+                              (cond
+                                (cond!44 cs!134)
+                                (cond!43 cs!131)
+                                (cond!42 cs!128)
+                                (cond!41 cs!125)
+                                (cond!40 cs!122)
+                                (else cs!119)))
+                            (else cs!125)))
+                        (=
+                          ht!3!assimilated'
+                          (ite cond!83
+                            (cond
+                              (cond!79 cs!172)
+                              (cond!78 cs!169)
+                              (cond!77 cs!166)
+                              (cond!76 cs!163)
+                              (cond!75 cs!160)
+                              (else cs!157))
+                            cs!166))
+                        (=
+                          ht!3!num_entries'
+                          (ite cond!83
+                            (cond
+                              (cond!79 cs!173)
+                              (cond!78 cs!170)
+                              (cond!77 cs!167)
+                              (cond!76 cs!164)
+                              (cond!75 cs!161)
+                              (else cs!158))
+                            cs!167))
+                        (=
+                          ht!3!num_to_migrate'
+                          (cond
+                            (cond!83 cs!115)
+                            (cond!48
+                              (cond
+                                (cond!44 cs!134)
+                                (cond!43 cs!131)
+                                (cond!42 cs!128)
+                                (cond!41 cs!125)
+                                (cond!40 cs!122)
+                                (else cs!119)))
+                            (else cs!128)))
+                        (=
+                          ht!4!assimilated'
+                          (ite cond!84
+                            (cond
+                              (cond!79 cs!172)
+                              (cond!78 cs!169)
+                              (cond!77 cs!166)
+                              (cond!76 cs!163)
+                              (cond!75 cs!160)
+                              (else cs!157))
+                            cs!169))
+                        (=
+                          ht!4!num_entries'
+                          (ite cond!84
+                            (cond
+                              (cond!79 cs!173)
+                              (cond!78 cs!170)
+                              (cond!77 cs!167)
+                              (cond!76 cs!164)
+                              (cond!75 cs!161)
+                              (else cs!158))
+                            cs!170))
+                        (=
+                          ht!4!num_to_migrate'
+                          (cond
+                            (cond!84 cs!115)
+                            (cond!49
+                              (cond
+                                (cond!44 cs!134)
+                                (cond!43 cs!131)
+                                (cond!42 cs!128)
+                                (cond!41 cs!125)
+                                (cond!40 cs!122)
+                                (else cs!119)))
+                            (else cs!131)))
+                        (=
+                          ht!5!assimilated'
+                          (ite cond!85
+                            (cond
+                              (cond!79 cs!172)
+                              (cond!78 cs!169)
+                              (cond!77 cs!166)
+                              (cond!76 cs!163)
+                              (cond!75 cs!160)
+                              (else cs!157))
+                            cs!172))
+                        (=
+                          ht!5!num_entries'
+                          (ite cond!85
+                            (cond
+                              (cond!79 cs!173)
+                              (cond!78 cs!170)
+                              (cond!77 cs!167)
+                              (cond!76 cs!164)
+                              (cond!75 cs!161)
+                              (else cs!158))
+                            cs!173))
+                        (=
+                          ht!5!num_to_migrate'
+                          (cond
+                            (cond!85 cs!115)
+                            (cond!50
+                              (cond
+                                (cond!44 cs!134)
+                                (cond!43 cs!131)
+                                (cond!42 cs!128)
+                                (cond!41 cs!125)
+                                (cond!40 cs!122)
+                                (else cs!119)))
+                            (else cs!134)))
+                        cs!175)
+                      (and cs!176 cs!135 cs!175 cs!183 cs!184 cs!185 cs!186)
+                      (and
+                        cs!176
+                        cs!177
+                        (not cs!178)
+                        cs!182
+                        cs!183
+                        cs!184
+                        cs!185
+                        cs!186)
+                      (and (= pc 3) (= pc' 0) cs!183 cs!184 cs!185 cs!186)
+                      (and (= pc 4) cs!182 cs!183 cs!184 cs!185 cs!186)))))))))
+
+(define-transition-system lfht_1 state initial_states transition)
+(query lfht_1
+      (or
+        (/= pc 3)
+        (and
+          (or (not (< 1 old)) ht!0!assimilated)
+          (or (not (< 2 old)) ht!1!assimilated)
+          (or (not (< 3 old)) ht!2!assimilated)
+          (or (not (< 4 old)) ht!3!assimilated)
+          (or (not (< 5 old)) ht!4!assimilated)
+          (or (not (< 6 old)) ht!5!assimilated))))
