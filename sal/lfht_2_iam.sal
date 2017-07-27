@@ -1,0 +1,157 @@
+lfht_2_iam: CONTEXT =
+BEGIN
+  % N : int = 10;
+  % T : int = 6;
+  % THRESHOLD : real = 6/10;
+  N : int = 6;
+  T : int = 8;
+  THRESHOLD : real = 6/10;
+
+  table_index: TYPE = [1 .. N];
+  descriptor: TYPE = [# num_entries : nat, num_to_migrate: nat, assimilated : bool #];
+  table: TYPE = ARRAY table_index OF descriptor;
+  empty_descriptor : descriptor = (# num_entries := 0, num_to_migrate := 0, assimilated := FALSE #);
+  empty_table : table = [ [i: table_index] empty_descriptor ];
+
+min (a : nat, b: nat): nat = IF  a < b THEN a ELSE b ENDIF;
+
+table_size (i: table_index, k:nat): bool =
+  (i=1 and k=32) or (i=2 and k=64) or (i=3 and k=128) or (i=4 and k=256) or
+  (i=5 AND k=512) or (i=6 AND k=1024);
+
+full_table (i: table_index, k:nat): bool =
+  (i=1 and k >= 32 * THRESHOLD) or  (i=2 and k >= 64 * THRESHOLD) or
+  (i=3 and k >= 128 * THRESHOLD) or (i=4 and k >= 256 * THRESHOLD) or
+  (i=5 and k >= 512 * THRESHOLD) or (i=6 and k >= 1024 * THRESHOLD) ;
+
+max_size(i: table_index): nat =
+  IF i=1 THEN 32
+  ELSIF i=2 THEN 64
+  ELSIF i=3 THEN 128
+  ELSIF i=4 THEN 256
+  ELSIF i=5 THEN 512
+  ELSE 1024
+  ENDIF;
+
+thread: TYPE = [1 .. 2];
+
+add : MODULE = 
+ BEGIN
+ GLOBAL
+  K : nat,
+  old, new : table_index,
+  ht : table
+ OUTPUT
+  pc : [0 .. 3]
+ INITIALIZATION
+   pc = 0;
+   K = 32;
+   ht = empty_table;
+   old = 1;
+   new = 1
+TRANSITION
+[ pc = 0 and old /= new and not ht[old].assimilated --> 
+        % moveN    
+        ht' = (ht WITH [new].num_entries := ht[new].num_entries + min (T,ht[old].num_to_migrate)) WITH [old].num_to_migrate := ht[old].num_to_migrate - min (T,ht[old].num_to_migrate) WITH [old].assimilated := (ht[old].num_to_migrate <= T);
+
+
+        % ht'[new].num_entries = ht[new].num_entries + min (T,ht[old].num_to_migrate);
+        % ht'[old].num_to_migrate = ht[old].num_to_migrate - min (T,ht[old].num_to_migrate);
+        % ht'[old].assimilated = (ht'[old].num_to_migrate = 0);
+        pc' = 1
+  []
+  pc = 0 and not( old /= new and not ht[old].assimilated) -->  pc' = 1
+  []
+  pc = 1 -->
+        ht'[new].num_entries = ht[new].num_entries + 1;
+        pc' = 2  
+  []
+  pc = 2 and ht[new].num_entries > THRESHOLD*K and new < N --> 
+       % grow
+       K' = 2 * K;
+       old' = new;
+       new' = new + 1;
+       ht' = (ht WITH [new+1].num_entries := 0) WITH [new+1].num_to_migrate := 0 WITH [new+1].assimilated := FALSE WITH [new].num_to_migrate := ht[new].num_entries;
+       
+       % ht'[new+1].num_entries = 0;       
+       % ht'[new+1].num_to_migrate = 0;       
+       % ht'[new+1].assimilated = FALSE;       
+       % ht'[new].num_to_migrate = ht[new].num_entries;       
+       pc' = 3
+  []
+  pc = 2 and ht[new].num_entries <= THRESHOLD*K --> pc' = 3
+  []
+  pc = 2 and ht[new].num_entries > THRESHOLD*K  and new >= N --> pc' = 4
+  []
+  pc = 3 --> pc' = 0
+  []
+  pc = 4 --> pc' = 4 
+]
+
+END;
+
+system: MODULE = WITH OUTPUT pc: ARRAY thread OF [0 .. 3]
+      (RENAME pc TO pc[1] IN add)  [] (RENAME pc TO pc[2] IN add);
+
+% PROVED(iam) sal-inf-bmc -i lfht_2_iam.sal lemma0
+lemma0 : LEMMA system |- G(pc[1] = 3 AND pc[2] = 3 => ht[new].num_entries <= THRESHOLD * K);
+
+% PROVED(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma1
+lemma1: LEMMA system |- G((new = 1 and old = 1) or (new = old+1));
+
+% HAVEN'T PROVEN YET(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma1a -l lemma1
+lemma1a : LEMMA system |- G( pc[1] /= 2 AND pc[2] /= 2 AND table_size (new,K)  => ht[new].num_entries <= THRESHOLD * K);
+
+% HAVEN'T PROVEN YET(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma1b -l lemma0 -l lemma1
+lemma1b : LEMMA system |- G( pc[1] = 2 AND pc[2] = 2 AND table_size (new,K)  => ht[new].num_entries < (THRESHOLD * K) + 2);
+
+% PROVED(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma2
+lemma2: LEMMA system |- G(FORALL (i: table_index): i > new => ht[i].num_entries = 0 and ht[i].num_to_migrate=0 and not ht[i].assimilated);
+
+% PROVED(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma2a
+lemma2a: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) AND table_size(i, ht[i].num_entries) => FORALL (j: table_index): j > i => ht[j].num_entries = 0 and ht[j].num_to_migrate=0 and not ht[j].assimilated);
+
+% PROVED(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma3
+lemma3: LEMMA system |- G(FORALL (i: table_index): ht[i].num_to_migrate <= ht[i].num_entries);
+
+% PROVED(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma4
+lemma4: LEMMA system |- G(table_size (new, K));
+
+% PROVED(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma5 -l lemma1 -l lemma4
+lemma5: LEMMA system |- G(FORALL (i: table_index): ht[i].num_entries <= max_size(i));
+
+% PROVED(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma5a -l lemma1 -l lemma4
+lemma5a: LEMMA system |- G(NOT ht[new].assimilated);
+
+% PROVED(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma5b -l lemma1 -l lemma4
+lemma5b: LEMMA system |- G(ht[new].num_to_migrate = 0);
+
+% PROVED(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma5c -l lemma1 -l lemma4
+lemma5c: LEMMA system |- G(old = new OR full_table(old, ht[old].num_entries));
+
+% CANNOT PROVE(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma5d -l lemma1 -l lemma4 -l lemma5a -l lemma5b -l lemma5c
+lemma5d: LEMMA system |- G(old /= new => pc[1] = 2 OR pc[2] = 2 OR (ht[old].num_to_migrate > 0 AND NOT ht[old].assimilated));
+
+% PROVED(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma5e -l lemma4 -l lemma5c
+lemma5e: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) => NOT ht[i].assimilated);
+
+% PROVED(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma5f -l lemma4
+lemma5f: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) => ht[i].num_to_migrate=0);
+
+% HAVE NOT PROVEN(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma5g -l lemma4 
+lemma5g: LEMMA system |- G(FORALL (i: table_index): ht[i].assimilated => ht[i].num_to_migrate=0);
+
+% CANNOT PROVE(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma6 -l lemma4
+lemma6 : LEMMA
+    system |- G(FORALL (i: table_index):
+	           i <= old AND pc[1] = 3 AND pc[2] = 3 =>
+		        (full_table(i, ht[i].num_entries) => (ht[i].num_to_migrate = 0 <=> ht[i].assimilated)) AND
+                        (NOT full_table(i, ht[i].num_entries) => NOT ht[i].assimilated AND ht[i].num_to_migrate = 0));
+
+% HAVE NOT PROVEN(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma7 -l lemma5
+lemma7: LEMMA system |- G(not ht[old].assimilated => (ht[new].num_entries <= (ht[old].num_entries - ht[old].num_to_migrate) * (1 + 1/T)));
+
+% HAVE NOT PROVEN(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal prop4 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5 -l lemma6 -l lemma7
+prop4 : LEMMA system |- G(pc[1] = 3 AND pc[2] = 3 => FORALL (i: table_index): i < old => ht[i].assimilated);
+
+END
