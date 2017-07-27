@@ -10,7 +10,7 @@ BEGIN
   table_index: TYPE = [1 .. N];
   descriptor: TYPE = [# num_entries : nat, num_to_migrate: nat, assimilated : bool #];
   table: TYPE = ARRAY table_index OF descriptor;
-  empty_descriptor : descriptor = (# num_entries := 0, num_to_migrate := 0, assimilated := FALSE  #);
+  empty_descriptor : descriptor = (# num_entries := 0, num_to_migrate := 0, assimilated := FALSE #);
   empty_table : table = [ [i: table_index] empty_descriptor ];
 
 min (a : nat, b: nat): nat = IF  a < b THEN a ELSE b ENDIF;
@@ -72,7 +72,7 @@ TRANSITION
        old' = new;
        new' = new + 1;
        ht' = (ht WITH [new+1].num_entries := 0) WITH [new+1].num_to_migrate := 0 WITH [new+1].assimilated := FALSE WITH [new].num_to_migrate := ht[new].num_entries;
-
+       
        % ht'[new+1].num_entries = 0;       
        % ht'[new+1].num_to_migrate = 0;       
        % ht'[new+1].assimilated = FALSE;       
@@ -93,14 +93,24 @@ END;
 system: MODULE = WITH OUTPUT pc: ARRAY thread OF [0 .. 3]
       (RENAME pc TO pc[1] IN add)  [] (RENAME pc TO pc[2] IN add);
 
-% PROVED sal-inf-bmc -i lfht_2.sal prop1
-prop1 : LEMMA system |- G(pc[1] = 3 AND pc[2] = 3 => ht[new].num_entries <= THRESHOLD * K);
+% PROVED sal-inf-bmc -i lfht_2.sal lemma0
+% NOTE: this lemma is subsumed by lemma1a
+lemma0 : LEMMA system |- G(pc[1] = 3 AND pc[2] = 3 => ht[new].num_entries <= THRESHOLD * K);
 
 % PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2.sal lemma1
 lemma1: LEMMA system |- G((new = 1 and old = 1) or (new = old+1));
 
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2.sal lemma1a -l lemma1
+lemma1a : LEMMA system |- G( pc[1] /= 2 AND pc[2] /= 2 AND table_size (new,K)  => ht[new].num_entries <= THRESHOLD * K);
+
+% HAVEN'T PROVEN YET
+lemma1b : LEMMA system |- G( pc[1] = 2 AND pc[2] = 2 AND table_size (new,K)  => ht[new].num_entries < (THRESHOLD * K) + 2);
+
 % PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2.sal lemma2
 lemma2: LEMMA system |- G(FORALL (i: table_index): i > new => ht[i].num_entries = 0 and ht[i].num_to_migrate=0 and not ht[i].assimilated);
+
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2.sal lemma2a
+lemma2a: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) AND table_size(i, ht[i].num_entries) => FORALL (j: table_index): j > i => ht[j].num_entries = 0 and ht[j].num_to_migrate=0 and not ht[j].assimilated);
 
 % PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2.sal lemma3
 lemma3: LEMMA system |- G(FORALL (i: table_index): ht[i].num_to_migrate <= ht[i].num_entries);
@@ -123,10 +133,19 @@ lemma5c: LEMMA system |- G(old = new OR full_table(old, ht[old].num_entries));
 % CANNOT PROVE sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2.sal lemma5d -l lemma1 -l lemma4 -l lemma5a -l lemma5b -l lemma5c
 lemma5d: LEMMA system |- G(old /= new => pc[1] = 2 OR pc[2] = 2 OR (ht[old].num_to_migrate > 0 AND NOT ht[old].assimilated));
 
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2.sal lemma5e -l lemma4
+lemma5e: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) => NOT ht[i].assimilated);
+
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2.sal lemma5f -l lemma4
+lemma5f: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) => ht[i].num_to_migrate=0);
+
+% HAVE NOT PROVEN sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2.sal lemma5g -l lemma4 
+lemma5g: LEMMA system |- G(FORALL (i: table_index): ht[i].assimilated => ht[i].num_to_migrate=0);
+
 % CANNOT PROVE sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2.sal lemma6 -l lemma4
 lemma6 : LEMMA
     system |- G(FORALL (i: table_index):
-	           i <= old =>
+	           i <= old AND pc[1] = 3 AND pc[2] = 3 =>
 		        (full_table(i, ht[i].num_entries) => (ht[i].num_to_migrate = 0 <=> ht[i].assimilated)) AND
                         (NOT full_table(i, ht[i].num_entries) => NOT ht[i].assimilated AND ht[i].num_to_migrate = 0));
 
