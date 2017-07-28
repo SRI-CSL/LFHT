@@ -178,11 +178,12 @@ lemma1b : LEMMA system |- G( pc[1] = 2 AND pc[2] = 2 AND table_size (new,K)  => 
 % HAVEN'T PROVEN YET sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma7a -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b
 lemma7a : LEMMA system |- G( FORALL(i: table_index): ht[i].num_entries <= (THRESHOLD * max_size(i)) + 2);
 
-%%% To prove this we should first to prove something like lemma7 (to related the relationship between old and new)
-% HAVEN'T PROVEN YET sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma7b -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b
-lemma7b : LEMMA system |- G( FORALL(i: table_index): old /= new AND i < new => ht[i].num_entries <= (THRESHOLD * max_size(i)) + 2);
+
 
 % HAVE NOT PROVEN(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal prop4 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b
 prop4 : LEMMA system |- G(pc[1] = 3 AND pc[2] = 3 => FORALL (i: table_index): i < old => ht[i].assimilated);
+
+
+
 
 END
