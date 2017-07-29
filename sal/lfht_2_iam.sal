@@ -33,6 +33,16 @@ max_size(i: table_index): nat =
   ELSE 1024
   ENDIF;
 
+% E(ht: table, i: table_index): nat =
+%    (ht[i].num_entries - ht[i].num_to_migrate) + ((ht[i].num_entries - ht[i].num_to_migrate) / T);
+
+E(ht: table, i: table_index): nat =
+   (ht[i].num_entries - ht[i].num_to_migrate) ;
+
+S(i:[0 .. 3], j:[0 .. 3], pc : ARRAY [1 .. 2] OF [0 .. 3]): bool =
+  (pc[1] = i AND pc[2] = j) OR (pc[1] = j AND pc[2] = i);
+
+
 thread: TYPE = [1 .. 2];
 
 add : MODULE = 
@@ -178,7 +188,32 @@ lemma1b : LEMMA system |- G( pc[1] = 2 AND pc[2] = 2 AND table_size (new,K)  => 
 % HAVEN'T PROVEN YET sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma7a -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b
 lemma7a : LEMMA system |- G( FORALL(i: table_index): ht[i].num_entries <= (THRESHOLD * max_size(i)) + 2);
 
+% HAVE NOT PROVEN(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma8 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma6c -l lemma6d
+lemma8 : LEMMA system |- G( (FORALL(i: table_index): ht[i].num_entries <= (THRESHOLD * max_size(i)) + 2) AND
+                     (old /= new AND pc[1] /= 1 AND pc[2] /= 1 AND not ht[old].assimilated => 
+		     (ht[new].num_entries >= (ht[old].num_entries - ht[old].num_to_migrate) + ((ht[old].num_entries - ht[old].num_to_migrate) / T) - (1 + 2) AND
+		      ht[new].num_entries = (ht[old].num_entries - ht[old].num_to_migrate) + ((ht[old].num_entries - ht[old].num_to_migrate) / T))) AND
+                     (old /= new AND (pc[1] = 1 OR pc[2] = 1) AND not ht[old].assimilated => 
+		     (ht[new].num_entries >= (ht[old].num_entries - ht[old].num_to_migrate) + ((ht[old].num_entries - ht[old].num_to_migrate) / T) - (1 + 2) AND
+		      ((ht[new].num_entries < (ht[old].num_entries - ht[old].num_to_migrate) + ((ht[old].num_entries - ht[old].num_to_migrate) / T)) OR
+		      (ht[new].num_entries <= 1 AND ht[old].num_entries = ht[old].num_to_migrate)))));
 
+% HAVE NOT PROVEN(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal lemma8a -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma6c -l lemma6d
+%% Suggestion to do next:
+% - Add a flag in the transition system whether we have already paid tax or not.
+% - If we didn't pay then we substract T to ht[new].num_entries below.
+lemma8a : LEMMA system |- G((FORALL(i: table_index): ht[i].num_entries <= (THRESHOLD * max_size(i)) + 2) AND
+	  	       	   old /= new AND not ht[old].assimilated =>
+			    ( (S(0,0,pc) => ht[new].num_entries = E(ht,old)) AND
+			      (S(0,1,pc) => ht[new].num_entries = E(ht,old) + T) AND
+			      (S(0,2,pc) => ht[new].num_entries = E(ht,old) + T + 1) AND
+			      (S(0,3,pc) => ht[new].num_entries = 0 OR ht[new].num_entries = E(ht,old) + T + 1) AND
+			      (S(1,1,pc) => ht[new].num_entries = E(ht,old) + (2*T)) AND
+			      (S(1,2,pc) => ht[new].num_entries = E(ht,old) + (2*T) +1) AND
+			      (S(1,3,pc) => ht[new].num_entries = 0 OR ht[new].num_entries = E(ht,old) + (2*T) + 1) AND
+			      (S(2,2,pc) => ht[new].num_entries = E(ht,old) + (2*T) +2) AND
+			      (S(2,3,pc) => ht[new].num_entries = 0 OR ht[new].num_entries = E(ht,old) + (2*T) + 2) AND
+			      (S(3,3,pc) => ht[new].num_entries = 0 OR ht[new].num_entries = E(ht,old) + (2*T) + 2)));
 
 % HAVE NOT PROVEN(iam) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_iam.sal prop4 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b
 prop4 : LEMMA system |- G(pc[1] = 3 AND pc[2] = 3 => FORALL (i: table_index): i < old => ht[i].assimilated);
