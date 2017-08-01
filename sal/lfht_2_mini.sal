@@ -169,28 +169,11 @@ lemma6c : LEMMA
 		        (NOT full_table(i, ht[i].num_entries) => NOT (ht[i].assimilated AND ht[i].num_to_migrate = 0)));
 
 
-% HAVE NOT PROVEN sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma6d -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6a -l lemma6b -l lemma6c
+% PROVED (note depth is 20): sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma6d -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6a -l lemma6b -l lemma6c -l lemma8d -l lemma8e -l pending2
 lemma6d : LEMMA
     system |- G(FORALL (i: table_index):
 	           i < old  => full_table(i, ht[i].num_entries) AND
 		   	       ht[i].num_to_migrate = 0 AND ht[i].assimilated);
-
-% HAVE NOT PROVEN sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma7 -l lemma5
-lemma7: LEMMA system |- G(old /= new AND not ht[old].assimilated => (ht[new].num_entries <= (ht[old].num_entries - ht[old].num_to_migrate) * (1 + 1/T)));
-
-% HAVEN'T PROVEN YET sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma1a -l lemma1
-lemma1a : LEMMA system |- G( pc[1] /= 2 AND pc[2] /= 2 AND table_size (new,K)  => ht[new].num_entries <= THRESHOLD * K);
-
-% HAVEN'T PROVEN YET sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma1b -l lemma0 -l lemma1
-lemma1b : LEMMA system |- G( pc[1] = 2 AND pc[2] = 2 AND table_size (new,K)  => ht[new].num_entries < (THRESHOLD * K) + 2);
-
-% HAVEN'T PROVEN YET sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma7a -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b
-lemma7a : LEMMA system |- G( FORALL(i: table_index): ht[i].num_entries <= (THRESHOLD * max_size(i)) + 2);
-
-% HAVE NOT PROVEN sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma8a -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b -l lemma6c 
-lemma8a : LEMMA system |- G((FORALL(i: table_index): ht[i].num_entries <= (THRESHOLD * max_size(i)) + 2) AND
-	  	       	   old /= new AND not ht[old].assimilated  =>
-	                   ht[new].num_entries <= Migrated(ht,old) + (Migrated(ht,old) / T) + (NUM_THREADS - 1));
 
 % PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma8e -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b -l lemma6c 
 lemma8e : LEMMA
@@ -223,7 +206,7 @@ pending2 : LEMMA system |- G( (pending = 2 <=> pc[1] = 1 AND pc[2] =1) AND
 		              (pending = 1 <=> pc[1] = 1 XOR pc[2] =1) AND
                               (pending = 0 <=> pc[1] /= 1 AND pc[2] /=1));
 		        
-% HAVE NOT PROVEN sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal prop4 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal prop4 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma8b -l lemma8d -l lemma8e -l pending2
 prop4 : LEMMA system |- G(pc[1] = 3 AND pc[2] = 3 => FORALL (i: table_index): i < old => ht[i].assimilated);
 
 
