@@ -215,7 +215,8 @@ lemma8d : LEMMA
 lemma8b : LEMMA
     system |- G( (FORALL(i: table_index): ht[i].num_entries <= (THRESHOLD * max_size(i)) + NUM_THREADS) AND
 	         ((old /= new AND not ht[old].assimilated) =>
- 		   ht[new].num_entries <= Migrated(ht,old) + (Migrated(ht,old) / T) + NUM_THREADS) AND
+ 		   ht[new].num_entries <= Migrated(ht,old) + (Migrated(ht,old) / T) + NUM_THREADS AND
+	           ht[new].num_entries > (NUM_THREADS-1) => ht[new].num_entries >= T) AND
 	         (FORALL (i: table_index):
 	           i < old  => full_table(i, ht[i].num_entries) AND
 		   	       ht[i].num_to_migrate = 0 AND ht[i].assimilated));
