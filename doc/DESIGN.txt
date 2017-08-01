@@ -42,7 +42,8 @@ predecessor still contains key-value pairs that have not yet been
 migrated to the new table.
 
 2. there is more than one table, the current table is new, and its
-predecessor table is assimilated.
+predecessor table has been assimilated, all key-value pairs have been
+migrated to the new table.
 
 
 So as a first approximation, our hash table consists of a state and
@@ -60,6 +61,8 @@ is the active table, and what is the oldest table the thread has
 an active interest in.
 
 
+
+
 Data Structures
 ---------------
 
@@ -69,3 +72,7 @@ Pseudo Code
 -----------
 
 TBD
+
+
+Critical Sections
+-----------------
