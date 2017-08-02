@@ -17,7 +17,7 @@ to stress the poor wee thing
 make stress
 ```
 
-takes about a week.
+be patient, it takes about a week.
 
 
 The algorithm we use is inspired by a paper by [Tobias Maier](doc/concurrent_htables-v2.pdf), [arxiv](https://arxiv.org/abs/1601.04017),
