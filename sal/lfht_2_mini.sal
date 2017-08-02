@@ -36,7 +36,7 @@ multiple_of_T (i: table_index, k:nat): bool =
 Migrated(ht: table, i: table_index): nat =
    (ht[i].num_entries - ht[i].num_to_migrate) ;
 
-thread: TYPE = [1 .. 2];
+thread: TYPE = [1 .. NUM_THREADS];
 
 add : MODULE = 
  BEGIN
