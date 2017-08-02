@@ -1,4 +1,4 @@
-lfht_2_mini: CONTEXT =
+lfht_3_mini: CONTEXT =
 BEGIN
   % N : int = 10;
   % T : int = 6;
@@ -101,85 +101,85 @@ END;
 system: MODULE = WITH OUTPUT pc: ARRAY thread OF [0 .. 3]
       (RENAME pc TO pc[1] IN add)  [] (RENAME pc TO pc[2] IN add);
 
-% PROVED sal-inf-bmc -i lfht_2_mini.sal lemma0
+% PROVED sal-inf-bmc -i lfht_3_mini.sal lemma0
 lemma0 : LEMMA system |- G(pc[1] = 3 AND pc[2] = 3 => ht[new].num_entries <= THRESHOLD * K);
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma1
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma1
 lemma1: LEMMA system |- G((new = 1 and old = 1) or (new = old+1));
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma2
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma2
 lemma2: LEMMA system |- G(FORALL (i: table_index): i > new => ht[i].num_entries = 0 and ht[i].num_to_migrate=0 and not ht[i].assimilated);
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma2a
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma2a
 lemma2a: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) AND table_size(i, ht[i].num_entries) => FORALL (j: table_index): j > i => ht[j].num_entries = 0 and ht[j].num_to_migrate=0 and not ht[j].assimilated);
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma3
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma3
 lemma3: LEMMA system |- G(FORALL (i: table_index): ht[i].num_to_migrate <= ht[i].num_entries);
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma4
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma4
 lemma4: LEMMA system |- G(table_size (new, K));
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma5 -l lemma1 -l lemma4
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma5 -l lemma1 -l lemma4
 lemma5: LEMMA system |- G(FORALL (i: table_index): ht[i].num_entries <= max_size(i));
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma5a -l lemma1 -l lemma4
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma5a -l lemma1 -l lemma4
 lemma5a: LEMMA system |- G(NOT ht[new].assimilated);
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma5b -l lemma1 -l lemma4
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma5b -l lemma1 -l lemma4
 lemma5b: LEMMA system |- G(ht[new].num_to_migrate = 0);
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma5c -l lemma1 -l lemma4
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma5c -l lemma1 -l lemma4
 lemma5c: LEMMA system |- G(old = new OR full_table(old, ht[old].num_entries));
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma5e -l lemma4 -l lemma5c
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma5e -l lemma4 -l lemma5c
 lemma5e: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) => NOT ht[i].assimilated);
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma5f -l lemma4
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma5f -l lemma4
 lemma5f: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) => ht[i].num_to_migrate=0);
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma5g -l lemma4 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f 
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma5g -l lemma4 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f 
 lemma5g: LEMMA system |- G(FORALL (i: table_index): ht[i].assimilated => ht[i].num_to_migrate=0);
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma6 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6a 
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma6 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6a 
 lemma6 : LEMMA
     system |- G(FORALL (i: table_index):
 	           i <= old =>
 		        (full_table(i, ht[i].num_entries) => (ht[i].num_to_migrate = 0 <=> ht[i].assimilated)) AND
                         (NOT full_table(i, ht[i].num_entries) => NOT (ht[i].assimilated AND ht[i].num_to_migrate = 0)));
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma6a -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6b 
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma6a -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6b 
 lemma6a : LEMMA
     system |- G(FORALL (i: table_index):
 	           i <= old AND pc[1] = 3 AND pc[2] = 3=>
 		        (full_table(i, ht[i].num_entries) => (ht[i].num_to_migrate = 0 <=> ht[i].assimilated)));
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma6b -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma6b -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g
 lemma6b : LEMMA
     system |- G(FORALL (i: table_index):
 	           i < old  => full_table(i, ht[i].num_entries) AND
 		               (ht[i].num_to_migrate = 0 <=> ht[i].assimilated));
 
-% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma8a -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b  
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma8a -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b  
 lemma8a : LEMMA
     system |- G(ht[old].num_entries <= max_size(old) AND
 	        (multiple_of_T(old, Migrated(ht,old)) OR Migrated(ht,old) = ht[old].num_entries));
 
-% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lemma8b -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b  
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma8b -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b  
 lemma8b : LEMMA
     system |- G(old /= new AND Migrated(ht,old) = 0 AND ht[new].num_entries = 0 => 
  	       (pc[1] = 0 OR pc[1] = 3) OR (pc[2] = 0 OR pc[2] = 3));
 
 
-% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending0 -l pending2
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal pending0 -l pending2
 pending0 : LEMMA system |- G( pending > 0 => pc[1] = 1 or pc[2] = 1);
-% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending1 -l pending2
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal pending1 -l pending2
 pending1 : LEMMA system |- G( pending >= 0 AND pending <= NUM_THREADS);
-% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending2 
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal pending2 
 pending2 : LEMMA system |- G( (pending = 2 <=> pc[1] = 1 AND pc[2] =1) AND
 		              (pending = 1 <=> pc[1] = 1 XOR pc[2] =1) AND
                               (pending = 0 <=> pc[1] /= 1 AND pc[2] /=1));
 
-% PROVED (note depth is 20):sal-inf-bmc -i -ice -v 1 -d 20 -s yices2 lfht_2_mini.sal lemma9 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b  -l lemma8b -l lemma8a -l pending2
+% PROVED (note depth is 20):sal-inf-bmc -i -ice -v 1 -d 20 -s yices2 lfht_3_mini.sal lemma9 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b  -l lemma8b -l lemma8a -l pending2
 lemma9 : LEMMA
     system |- G( 
                  ( old /= new AND not ht[old].assimilated =>
@@ -191,7 +191,7 @@ lemma9 : LEMMA
 		   	       ht[i].num_to_migrate = 0 AND ht[i].assimilated));
 
 		        
-% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal prop1 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma9 
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal prop1 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma9 
 prop1 : LEMMA system |- G(FORALL (i: table_index): i < old => ht[i].assimilated);
 
 
