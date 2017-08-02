@@ -61,13 +61,29 @@ is the active table, and what is the oldest table the thread has
 an active interest in.
 
 
+Data Structures
+---------------
 
+A hash table consists of a
+  - hdr; the head of the linked list
+  - state; the table state 
+  - lock; a mutex
 
+In order to be able to update the state and hdr fields of a table
+atomically, they are stored as bit fields in a single 64 bit field.
+
+The linked list consists of one or more table_hdr structures.
+
+A table_hdr structure consists of:
+ - reference_count; the number of threads that can touch this structure
+ - assimilated; a flag indicating that all the data in the table has been migrated
+ - table; the actual memory used to accomodate the linear probing hash entries
+plus some other bookeeping fields that are needed to manage the table_hdr.
 
 
 A handle consists of:
  - self; the identity of the thread owning it
- - table; the list header
+ - table; the hash table
  - table_hdr; the thread's idea of the current table
  - last; the oldest table the thread knows about
 
@@ -88,16 +104,6 @@ at periodic intervals the last table in the linked list will be checked to see
 if it be reclaimed (i.e. has zero) reference count.
 
 
-
-
-
-
-
-Data Structures
----------------
-
-TBD
-
 Pseudo Code
 -----------
 
@@ -106,3 +112,5 @@ TBD
 
 Critical Sections
 -----------------
+
+TDB
