@@ -32,7 +32,6 @@ old table has been assimilated.
 We lazily reclaim old tables when they are no longer in use. Being able
 to say when they are no longer in use is the hardest part of the design.
 
-
 So an active table can be in one of three states:
 
 0. the current table is the only table.
@@ -46,11 +45,12 @@ predecessor table has been assimilated, all key-value pairs have been
 migrated to the new table.
 
 
-So as a first approximation, our hash table consists of a state and
-a pointer to the front of the linked list of tables.  The question
-then, is "how can we release old tables?" The problem is that, without
-additional information, there could always be slow threads that wake
-up thinking that the old table is the current active table.
+So as a first approximation, our hash table consists of a state and a
+pointer to the list header, the front of the linked list of tables.
+The question then, is "how can we release old tables?" The problem is
+that, without additional information, there could always be slow
+threads that wake up thinking that the old table is the current active
+table.
 
 We solve this problem by using reference counting. A thread's access
 to the hash table is via a handle object. The add, remove, and find
@@ -59,6 +59,35 @@ handle maintains information about the thread's knowledge of the
 table. Of particular interest is the thread's current idea of which
 is the active table, and what is the oldest table the thread has
 an active interest in.
+
+
+
+
+
+A handle consists of:
+ - self; the identity of the thread owning it
+ - table; the list header
+ - table_hdr; the thread's idea of the current table
+ - last; the oldest table the thread knows about
+
+
+When a thread creates a handle to a table, it increments the reference
+count of the current table, and if the table is expanding, also the
+next table in the linked list, which is the handle's last field.  If
+the table is not expanding, last is just the current table.
+
+Note that a handle may not be upto date. The list
+header may in fact point to a newer table, and not the handle's table_hdr
+field. However on creation we must ensure that it is upto date, and
+this is one of the critical sections that we must protect with a lock.
+
+Periodically a thread will ensure that its handle is upto date. During this process
+it may move it's last field, and decrement reference counts. Similarly
+at periodic intervals the last table in the linked list will be checked to see
+if it be reclaimed (i.e. has zero) reference count.
+
+
+
 
 
 
