@@ -119,7 +119,7 @@ lemma3: LEMMA system |- G(FORALL (i: table_index): ht[i].num_to_migrate <= ht[i]
 % PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma4
 lemma4: LEMMA system |- G(table_size (new, K));
 
-% HAVE NOT PROVED yet sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma5 -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 
+% HAVE NOT PROVED yet sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma5 -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma0
 lemma5: LEMMA system |- G(FORALL (i: table_index): ht[i].num_entries <= max_size(i));	                  
 
 % PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma5a -l lemma1 -l lemma4
@@ -174,14 +174,15 @@ lemma8b : LEMMA
 pending0 : LEMMA system |- G( pending > 0 => pc[1] = 1 or pc[2] = 1 or pc[3] = 1);
 % PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal pending1 -l pending2
 pending1 : LEMMA system |- G( pending >= 0 AND pending <= NUM_THREADS);
-
-% HAVE NOT PROVED yet: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal pending2a
-pending2a : LEMMA system |- G( (pending = 3 <=> pc[1] = 1 AND pc[2] =1 AND pc[3] = 1));
-
-% NEED TO BE UPDATED to 3 threads: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal pending2 
-pending2 : LEMMA system |- G( (pending = 2 <=> pc[1] = 1 AND pc[2] =1) AND
-		              (pending = 1 <=> pc[1] = 1 XOR pc[2] =1) AND
-                              (pending = 0 <=> pc[1] /= 1 AND pc[2] /=1));
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal pending2 
+pending2 : LEMMA system |- G( (pending = 3 <=> pc[1] = 1 AND pc[2] = 1 AND pc[3] = 1) AND
+	                      (pending = 2 <=> (pc[1] = 1 AND pc[2] = 1 AND pc[3] /= 1) OR 
+	                                       (pc[1] = 1 AND pc[2] /= 1 AND pc[3] = 1) OR
+	                                       (pc[1] /= 1 AND pc[2] = 1 AND pc[3] = 1)) AND
+		              (pending = 1 <=> (pc[1] = 1 AND pc[2] /= 1 AND pc[3] /= 1) OR 
+	                                       (pc[1] /= 1 AND pc[2] = 1 AND pc[3] /= 1) OR
+	                                       (pc[1] /= 1 AND pc[2] /= 1 AND pc[3] = 1)) AND
+                              (pending = 0 <=> pc[1] /= 1 AND pc[2] /= 1 AND pc[3] /= 1));
 
 % HAVE NOT BEEN PROVED (note depth is 20):sal-inf-bmc -i -ice -v 1 -d 20 -s yices2 lfht_3_mini.sal lemma9 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b  -l lemma8b -l lemma8a -l pending2
 lemma9 : LEMMA
