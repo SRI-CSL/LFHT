@@ -140,10 +140,10 @@ lemma5f: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_
 % PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma5g -l lemma4 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f 
 lemma5g: LEMMA system |- G(FORALL (i: table_index): ht[i].assimilated => ht[i].num_to_migrate=0);
 
-% HAVE NOT PROVED yet sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma6 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6a 
+% PROVED (added old < new) sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal lemma6 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6a 
 lemma6 : LEMMA
     system |- G(FORALL (i: table_index):
-	           i <= old =>
+	           i <= old AND old < new =>
 		        (full_table(i, ht[i].num_entries) => (ht[i].num_to_migrate = 0 <=> ht[i].assimilated)) AND
                         (NOT full_table(i, ht[i].num_entries) => NOT (ht[i].assimilated AND ht[i].num_to_migrate = 0)));
 

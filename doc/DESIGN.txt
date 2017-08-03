@@ -77,7 +77,8 @@ The linked list consists of one or more table_hdr structures.
 A table_hdr structure consists of:
  - reference_count; the number of threads that can touch this structure
  - assimilated; a flag indicating that all the data in the table has been migrated
- - table; the actual memory used to accomodate the linear probing hash entries
+ - count; the number of non-zero keys in the table data
+ - table; the table data, an array of key value pairs used to accomodate the linear probing hash entries
 plus some other bookeeping fields that are needed to manage the table_hdr.
 
 
