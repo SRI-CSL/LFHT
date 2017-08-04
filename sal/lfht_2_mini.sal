@@ -179,6 +179,13 @@ pending2 : LEMMA system |- G( (pending = 2 <=> pc[1] = 1 AND pc[2] =1) AND
 		              (pending = 1 <=> pc[1] = 1 XOR pc[2] =1) AND
                               (pending = 0 <=> pc[1] /= 1 AND pc[2] /=1));
 
+
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending_upper -l pending2
+pending_upper : LEMMA system |- G( pending <= NUM_THREADS   );
+
+
+
+
 % PROVED (note depth is 20):sal-inf-bmc -i -ice -v 1 -d 20 -s yices2 lfht_2_mini.sal lemma9 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b  -l lemma8b -l lemma8a -l pending2
 lemma9 : LEMMA
     system |- G( 
@@ -193,6 +200,8 @@ lemma9 : LEMMA
 		        
 % PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal prop1 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma9 
 prop1 : LEMMA system |- G(FORALL (i: table_index): i < old => ht[i].assimilated);
+
+
 
 %PROVED:  sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lower -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma9 -l prop1
 lower : LEMMA
