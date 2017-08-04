@@ -43,7 +43,7 @@ add : MODULE =
  GLOBAL
   K : nat,
   old, new : table_index,
-  pending : nat,
+  pending : int,
   ht : table
  OUTPUT
   pc : [0 .. 3]
@@ -175,10 +175,13 @@ pending0 : LEMMA system |- G( pending > 0 => pc[1] = 1 or pc[2] = 1);
 % PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending1 -l pending2
 pending1 : LEMMA system |- G( pending >= 0 AND pending <= NUM_THREADS);
 % PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending2 
-pending2 : LEMMA system |- G( (pending = 2 <=> pc[1] = 1 AND pc[2] =1) AND
-		              (pending = 1 <=> pc[1] = 1 XOR pc[2] =1) AND
-                              (pending = 0 <=> pc[1] /= 1 AND pc[2] /=1));
+pending2 : LEMMA system |- G( (pending = 2 <=> pc[1] = 1 AND pc[2] = 1) AND
+		              (pending = 1 <=> pc[1] = 1 XOR pc[2] = 1) AND
+                              (pending = 0 <=> pc[1] /= 1 AND pc[2] /= 1));
 
+
+% PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending_pos -l pending2
+pending_pos : LEMMA system |- G( pending >= 0 );
 
 % PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending_upper -l pending2
 pending_upper : LEMMA system |- G( pending <= NUM_THREADS   );
