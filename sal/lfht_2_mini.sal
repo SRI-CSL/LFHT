@@ -169,51 +169,42 @@ lemma8b : LEMMA
     system |- G(old /= new AND Migrated(ht,old) = 0 AND ht[new].num_entries = 0 => 
  	       (pc[1] = 0 OR pc[1] = 3) OR (pc[2] = 0 OR pc[2] = 3));
 
-
-% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending0 -l pending2
-pending0 : LEMMA system |- G( pending > 0 => pc[1] = 1 or pc[2] = 1);
-% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending1 -l pending2
-pending1 : LEMMA system |- G( pending >= 0 AND pending <= NUM_THREADS);
-% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending2 
-pending2 : LEMMA system |- G( (pending = 2 <=> pc[1] = 1 AND pc[2] = 1) AND
-		              (pending = 1 <=> pc[1] = 1 XOR pc[2] = 1) AND
-                              (pending = 0 <=> pc[1] /= 1 AND pc[2] /= 1));
-
-
 % PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending_pos -l pending2
 pending_pos : LEMMA system |- G( pending >= 0 );
 
 % PROVED sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending_upper -l pending2
 pending_upper : LEMMA system |- G( pending <= NUM_THREADS   );
 
-
-
-
-% PROVED (note depth is 20):sal-inf-bmc -i -ice -v 1 -d 20 -s yices2 lfht_2_mini.sal lemma9 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b  -l lemma8b -l lemma8a -l pending2
-lemma9 : LEMMA
-    system |- G( 
-                 ( old /= new AND not ht[old].assimilated =>
- 		   (ht[new].num_entries <= Migrated(ht,old) + (Migrated(ht,old) / T) + (NUM_THREADS-1) + pending) AND
-		   (ht[new].num_entries > (NUM_THREADS-1) => ht[new].num_entries >= T)) AND
-		 (FORALL(i: table_index): ht[i].num_entries <= (THRESHOLD * max_size(i)) + NUM_THREADS) AND
-	         (FORALL (i: table_index):
-	           i < old  => full_table(i, ht[i].num_entries) AND
-		   	       ht[i].num_to_migrate = 0 AND ht[i].assimilated));
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending
+pending: LEMMA system |- G( pending = (IF pc[1] = 1 THEN 1 ELSE 0 ENDIF) + (IF pc[2] = 1 THEN 1 ELSE 0 ENDIF));
 
 		        
-% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal prop1 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma9 
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 0 -s yices2 lfht_2_mini.sal prop1 -l upper
 prop1 : LEMMA system |- G(FORALL (i: table_index): i < old => ht[i].assimilated);
 
 
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal forbidden 
+forbidden :  LEMMA
+      system |- G( (old /= new  AND not ht[old].assimilated  =>  
+	            (ht[new].num_entries > (NUM_THREADS-1) => ht[new].num_entries >= T)));
 
-%PROVED:  sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lower -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma9 -l prop1
+
+%PROVED:  sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lower -l pending_pos
 lower : LEMMA
-      system |- G( old /= new  =>   Migrated(ht,old) + Migrated(ht,old)/T  - pending <= ht[new].num_entries );
+      system |- G( old /= new  => Migrated(ht,old) + Migrated(ht,old)/T  - pending <= ht[new].num_entries );
 
 
-%PROVED sal-inf-bmc -i -ice -v 1 -d 20 -s yices2 lfht_2_mini.sal upper -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma9 -l prop1
+% PROVED sal-inf-bmc -i -ice -v 1 -d 20 -s yices2 lfht_2_mini.sal upper -l pending_pos -l pending -l lemma0 -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma5 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6a -l lemma6b -l lemma8b -l lemma8a -l lemma8b -l forbidden -l sane_past
 upper :  LEMMA
-      system |- G( old /= new  AND not ht[old].assimilated  =>   ht[new].num_entries <= Migrated(ht,old) + (Migrated(ht,old) / T) +  (NUM_THREADS-1) + pending );
-
+      system |- G( (old /= new  AND not ht[old].assimilated  =>  
+                    (ht[new].num_entries <= Migrated(ht,old) + (Migrated(ht,old) / T) +  (NUM_THREADS-1) + pending)) AND
+		   (FORALL (i: table_index): ht[i].num_entries <= (THRESHOLD * max_size(i)) + NUM_THREADS));
+			
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 20 -s yices2 lfht_2_mini.sal upper_1 -l pending_pos -l pending -l lemma0 -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma5 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g
+sane_past :  LEMMA
+      system |- G(
+		   (FORALL (i: table_index):
+		        i < old  => full_table(i, ht[i].num_entries) AND
+			            ht[i].num_to_migrate = 0 AND ht[i].assimilated));
 
 END
