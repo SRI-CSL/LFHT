@@ -177,17 +177,13 @@ pending_upper : LEMMA system |- G( pending <= NUM_THREADS   );
 
 % PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal pending
 pending: LEMMA system |- G( pending = (IF pc[1] = 1 THEN 1 ELSE 0 ENDIF) + (IF pc[2] = 1 THEN 1 ELSE 0 ENDIF));
-
-		        
-% PROVED: sal-inf-bmc -i -ice -v 1 -d 0 -s yices2 lfht_2_mini.sal prop1 -l upper
-prop1 : LEMMA system |- G(FORALL (i: table_index): i < old => ht[i].assimilated);
-
+		       
 
 % PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal forbidden 
 forbidden :  LEMMA
       system |- G( (old /= new  AND not ht[old].assimilated  =>  
-	            (ht[new].num_entries > (NUM_THREADS-1) => ht[new].num_entries >= T)));
-
+	           NOT ((NUM_THREADS-1) < ht[new].num_entries AND ht[new].num_entries < T)));
+		            
 
 %PROVED:  sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini.sal lower -l pending_pos
 lower : LEMMA
@@ -206,5 +202,8 @@ sane_past :  LEMMA
 		   (FORALL (i: table_index):
 		        i < old  => full_table(i, ht[i].num_entries) AND
 			            ht[i].num_to_migrate = 0 AND ht[i].assimilated));
+
+% PROVED: sal-inf-bmc -i -ice -v 1 -d 0 -s yices2 lfht_2_mini.sal prop1 -l upper
+prop1 : LEMMA system |- G(FORALL (i: table_index): i < old => ht[i].assimilated);
 
 END
