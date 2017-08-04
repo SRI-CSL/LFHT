@@ -192,7 +192,7 @@ lemma9 : LEMMA
 	           i < old  => full_table(i, ht[i].num_entries) AND
 		   	       ht[i].num_to_migrate = 0 AND ht[i].assimilated));
 		        
-% HAVE NOT BEEN PROVED: sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal prop1 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma9 
+% PROVED (assuming lemma9): sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_3_mini.sal prop1 -l lemma0 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma6b -l lemma9 
 prop1 : LEMMA system |- G(FORALL (i: table_index): i < old => ht[i].assimilated);
 
 
