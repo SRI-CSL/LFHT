@@ -285,7 +285,7 @@ upper_strengthening_5 :  LEMMA
        system |- G( (old /= new => ht[new].num_entries = Migrated(ht, old) + posted));
 
 % PROVED 
-% sal-inf-bmc -i -ice -v 1 -d 13 -s yices2 lfht_5_micro.sal upper_global -l pending_pos -l pending -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma8b -l upper_strengthening_2 -l upper_strengthening_3 -l upper_strengthening_3a -l paid_tax_0 -l paid_tax_1 -l posted_0 -l posted_1 -l did_not_pay_1  -l lemma6b  -l upper_strengthening_5 -l revenue_0 -l revenue_1 -l revenue_2 -l final -l revenue_3 -l revenue_4 -l revenue_5
+% sal-inf-bmc -i -ice -v 1 -d 11 -s yices2 lfht_5_micro.sal upper_global -l pending_pos -l pending -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma8b -l upper_strengthening_2 -l upper_strengthening_3 -l upper_strengthening_3a -l paid_tax_0 -l paid_tax_1 -l posted_0 -l posted_1 -l did_not_pay_1  -l lemma6b  -l upper_strengthening_5 -l revenue_0 -l revenue_1 -l revenue_2 -l final -l revenue_3 -l revenue_4 -l revenue_5
 upper_global :  LEMMA
       system |- G( (FORALL (i: table_index): i < N => ht[i].num_entries <= (THRESHOLD * max_size(i)) + NUM_THREADS));
 		   
