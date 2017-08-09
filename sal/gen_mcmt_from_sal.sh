@@ -17,7 +17,7 @@ if [ $filename != $extension ]; then
     exit
 fi
 
-salenv-safe <<EOF | tail -n +12 | head -n -1 | sed s/'AND'/'and'/g | sed s/'if'/'ite'/g | sed s/'OR'/'or'/g > $INPUT.flat 
+salenv-safe <<EOF | tail -n +12 | head -n -1 | sed s/'AND'/'and'/g | sed s/'if'/'ite'/g | sed s/'OR'/'or'/g > $INPUT.$PROPERTY.flat 
  (sal/set-pp-max-width! 10000)
  (sal/set-pp-max-depth! 10000)
  (sal/set-pp-max-num-lines! 100000)
