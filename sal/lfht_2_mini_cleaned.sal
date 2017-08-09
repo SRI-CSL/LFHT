@@ -1,0 +1,225 @@
+%% like lfht_2_mini.sal but after removing useless lemmas
+
+lfht_2_mini_cleaned: CONTEXT =
+BEGIN
+  % N : int = 10;
+  % T : int = 6;
+  % THRESHOLD : real = 6/10;
+  N : int = 3;
+  T : int = 8;
+  THRESHOLD : real = 6/10;
+  NUM_THREADS: nat = 2;	
+  table_index: TYPE = [1 .. N];
+  descriptor: TYPE = [# num_entries : nat, num_to_migrate: nat, assimilated : bool #];
+  table: TYPE = ARRAY table_index OF descriptor;
+  empty_descriptor : descriptor = (# num_entries := 0, num_to_migrate := 0, assimilated := FALSE #);
+  empty_table : table = [ [i: table_index] empty_descriptor ];
+
+min (a : nat, b: nat): nat = IF  a < b THEN a ELSE b ENDIF;
+
+table_size (i: table_index, k:nat): bool =
+  (i=1 and k=32) OR (i=2 and k=64) OR (i=3 and k=128);
+
+full_table (i: table_index, k:nat): bool =
+  (i=1 and k >= 32 * THRESHOLD) OR (i=2 and k >= 64 * THRESHOLD) OR (i=3 and k >= 128 * THRESHOLD);
+
+max_size(i: table_index): nat =
+  IF i=1 THEN 32
+  ELSIF i = 2 THEN 64
+  ELSE 128
+  ENDIF;
+
+multiple_of_T (i: table_index, k:nat): bool =
+  (i=1 AND (k=0 OR k=8 OR k=16 OR k=24 OR k=32)) OR
+  (i=2 AND (k=0 OR k=8 OR k=16 OR k=24 OR k=32 OR k=40 OR k=48 OR k=56 OR k=64)) OR
+  (i=3 AND (k=0 OR k=8 OR k=16 OR k=24 OR k=32 OR k=40 OR k=48 OR k=56 OR k=64 OR
+	    k=72 OR k=80 OR k=88 OR k=96 OR k=104 OR k=112 OR k=120 OR k=128));	
+
+Migrated(ht: table, i: table_index): nat =
+   (ht[i].num_entries - ht[i].num_to_migrate) ;
+
+thread: TYPE = [1 .. NUM_THREADS];
+
+add : MODULE = 
+ BEGIN
+ GLOBAL
+  K : nat,
+  old, new : table_index,
+  pending : int,
+  did_not_pay : int,
+  paid_tax : int,
+  posted : int,
+  ht : table
+ OUTPUT
+  pc : [0 .. 4]
+ INITIALIZATION
+   pc = 0;
+   pending = 0;
+   did_not_pay = 0;
+   paid_tax = 0;
+   posted = 0;
+   K = 32;
+   ht = empty_table;
+   old = 1;
+   new = 1
+TRANSITION
+[ pc = 0 and old /= new and not ht[old].assimilated --> 
+        % moveN    
+        ht' = (ht WITH [new].num_entries := ht[new].num_entries + min (T,ht[old].num_to_migrate)) WITH [old].num_to_migrate := ht[old].num_to_migrate - min (T,ht[old].num_to_migrate) WITH [old].assimilated := (ht[old].num_to_migrate <= T);
+
+
+        % ht'[new].num_entries = ht[new].num_entries + min (T,ht[old].num_to_migrate);
+        % ht'[old].num_to_migrate = ht[old].num_to_migrate - min (T,ht[old].num_to_migrate);
+        % ht'[old].assimilated = (ht'[old].num_to_migrate = 0);
+	pending' = pending + 1;
+	paid_tax' = paid_tax + 1;
+        pc' = 1
+  []
+  pc = 0 and not( old /= new and not ht[old].assimilated) -->  pc' = 1; pending' = pending + 1;
+  []
+  pc = 1 -->
+        ht'[new].num_entries = ht[new].num_entries + 1;
+	pending' = pending - 1 ;
+        posted' = posted + 1;
+        pc' = 2  
+  []
+  pc = 2 and ht[new].num_entries > THRESHOLD*K and new < N --> 
+       % grow
+       K' = 2 * K;
+       old' = new;
+       new' = new + 1;
+       ht' = (ht WITH [new+1].num_entries := 0) WITH [new+1].num_to_migrate := 0 WITH [new+1].assimilated := FALSE WITH [new].num_to_migrate := ht[new].num_entries;
+       
+       % ht'[new+1].num_entries = 0;       
+       % ht'[new+1].num_to_migrate = 0;       
+       % ht'[new+1].assimilated = FALSE;       
+       % ht'[new].num_to_migrate = ht[new].num_entries;       
+       did_not_pay' = pending;
+       paid_tax' = 0;
+       posted' = 0;
+       pc' = 3
+  []
+  pc = 2 and ht[new].num_entries <= THRESHOLD*K --> pc' = 3
+  []
+  pc = 2 and ht[new].num_entries > THRESHOLD*K  and new >= N --> pc' = 4
+  []
+  pc = 3 --> pc' = 0
+  []
+  pc = 4 --> pc' = 4 
+]
+
+END;
+
+system: MODULE = WITH OUTPUT pc: ARRAY thread OF [0 .. 3]
+      ([] (i: thread): (RENAME pc TO pc[i] IN add));
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma0
+lemma0 : LEMMA system |- G( (FORALL (i: thread): pc[i] = 3) => ht[new].num_entries <= THRESHOLD * K);
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma1
+lemma1: LEMMA system |- G((new = 1 and old = 1) or (new = old+1));
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma2
+lemma2: LEMMA system |- G(FORALL (i: table_index): i > new => ht[i].num_entries = 0 and ht[i].num_to_migrate=0 and not ht[i].assimilated);
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma2a
+lemma2a: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) AND table_size(i, ht[i].num_entries) => FORALL (j: table_index): j > i => ht[j].num_entries = 0 and ht[j].num_to_migrate=0 and not ht[j].assimilated);
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma3
+lemma3: LEMMA system |- G(FORALL (i: table_index): ht[i].num_to_migrate <= ht[i].num_entries);
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma4
+lemma4: LEMMA system |- G(table_size (new, K));
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma5a  -l lemma4
+lemma5a: LEMMA system |- G(NOT ht[new].assimilated);
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma5b -l lemma4
+lemma5b: LEMMA system |- G(ht[new].num_to_migrate = 0);
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma5c -l lemma4
+lemma5c: LEMMA system |- G(old = new OR full_table(old, ht[old].num_entries));
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma5e -l lemma5c
+lemma5e: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) => NOT ht[i].assimilated);
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma5f -l lemma4
+lemma5f: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) => ht[i].num_to_migrate=0);
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma5g -l lemma5a 
+lemma5g: LEMMA system |- G(FORALL (i: table_index): ht[i].assimilated => ht[i].num_to_migrate=0);
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal lemma8a  -l lemma1 -l lemma4 
+lemma8a : LEMMA
+    system |- G(ht[old].num_entries <= max_size(old) AND
+	        (multiple_of_T(old, Migrated(ht,old)) OR Migrated(ht,old) = ht[old].num_entries));
+
+% PROVED
+%  sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal pending
+pending: LEMMA system |- G( pending = (IF pc[1] = 1 THEN 1 ELSE 0 ENDIF) + (IF pc[2] = 1 THEN 1 ELSE 0 ENDIF));
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal did_not_pay_0
+did_not_pay_0 : LEMMA
+      system |- G( old = new => did_not_pay = 0 );		
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal did_not_pay_1 -l pending
+did_not_pay_1 : LEMMA
+      system |- G( did_not_pay < NUM_THREADS);		
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal paid_tax_0
+paid_tax_0 : LEMMA
+      system |- G( old = new => paid_tax = 0 );		
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal paid_tax_1 
+paid_tax_1 : LEMMA
+      system |- G( paid_tax >= 0);		
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal posted_0 
+posted_0 : LEMMA
+      system |- G( posted >= 0);		
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal posted_1 -l posted_0 
+posted_1 : LEMMA
+      system |- G( old /= new AND not ht[old].assimilated => 
+	           posted + pending =  paid_tax + did_not_pay);		
+		            
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal upper_strengthening_1 
+upper_strengthening_1 :  LEMMA
+       system |- G( (old /= new AND ht[old].num_to_migrate >= T => ht[new].num_entries = T * paid_tax + posted));
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal upper_strengthening_2  
+upper_strengthening_2 :  LEMMA
+       system |- G( (old /= new => ht[new].num_entries <= T * paid_tax + posted));
+
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 6 -s yices2 lfht_2_mini_cleaned.sal upper -l lemma0 -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4  -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma8a -l upper_strengthening_1 -l upper_strengthening_2 -l posted_0 -l posted_1 -l did_not_pay_0 -l did_not_pay_1 -l pending
+upper :  LEMMA
+      system |- G( (old /= new  AND not ht[old].assimilated  =>  
+                    (ht[new].num_entries <= Migrated(ht,old) + (Migrated(ht,old) / T) +  (NUM_THREADS-1) + pending)) AND
+		   (FORALL (i: table_index): ht[i].num_entries <= (THRESHOLD * max_size(i)) + NUM_THREADS));
+
+% PROVED 
+% sal-inf-bmc -i -ice -v 1 -d 10 -s yices2 lfht_2_mini_cleaned.sal prop1 -l upper -l pending -l lemma4 
+prop1 : LEMMA system |- G(FORALL (i: table_index): i < old => ht[i].assimilated);
+
+END
