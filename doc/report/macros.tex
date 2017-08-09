@@ -1,0 +1,75 @@
+% !TEX root = proposal.tex
+% !TEX program = pdflatex
+
+\documentclass[12pt,letterpaper]{article}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{fullpage}
+\usepackage{times}
+\usepackage{url}
+\usepackage{enumitem}
+%\usepackage{enumerate}
+\usepackage{alltt}
+\usepackage{wrapfig}
+\usepackage{lscape}
+%\usepackage[labelfont=bf]{caption}
+\usepackage{cutwin}
+%\usepackage{geometry}
+\usepackage{amssymb,amsmath} % amsthm
+\usepackage{latexsym}
+\usepackage{xspace}
+\usepackage{listings}
+\usepackage{proof}
+\usepackage{ntheorem}
+\usepackage{tabularx}
+\usepackage{remreset}
+\usepackage{color,colortbl}
+\usepackage{etoolbox}
+%\usepackage{tikz}
+
+
+%% if on then we remove all comments for the public
+\newtoggle{public}
+\toggletrue{public}
+%\togglefalse{public}
+
+%%% For final version
+\iftoggle{public}{%
+\newcommand{\todo}[1]{}
+\newcommand{\jorge}[1]{}
+\newcommand{\ian}[1]{}
+\newcommand{\bruno}[1]{}
+}{
+\newcommand{\todo}[1]{{\bf\noindent TODO: {#1}}}
+\newcommand{\jorge}[1]{{\bf\noindent \color{blue} Jorge: {#1}}}
+\newcommand{\ian}[1]{{\bf\noindent \color{red} Ian: {#1}}}
+\newcommand{\bruno}[1]{{\bf\noindent \color{green} Bruno: {#1}}}
+}
+
+
+\newcounter{proglineno}
+\newcommand{\putno}{\refstepcounter{proglineno}\begin{scriptsize}\textcolor{cyan}{\arabic{proglineno}:}\end{scriptsize}~}
+\lstset{language=C,
+  basicstyle=\fontfamily{pcr}\selectfont\footnotesize\color{black},
+  keywordstyle=\color{black}\bfseries, % style for keywords
+  %morekeywords=sassert,
+  %morekeywords=malloc,
+  numbers=none, % where to put the line-numbers
+  % the size of the fonts that are used for the line-numbers
+  numberstyle=\tiny,
+  %backgroundcolor=\color{codebg},
+  showspaces=false, % show spaces adding particular underscores
+  showstringspaces=false, % underline spaces within strings
+  showtabs=false, % show tabs within strings adding particular underscores
+  %frame=single, % adds a frame around the code
+  %tabsize=2, % sets default tabsize to 2 spaces
+  %rulesepcolor=\color{gray},
+  %rulecolor=\color{black},
+  moredelim=[s]'',
+  captionpos=b, % sets the caption-position to bottom
+  breaklines=true, % sets automatic line breaking
+  breakatwhitespace=false}
+\lstnewenvironment{clisting}{\lstset{language=C,basicstyle=\ttfamily\scriptsize}}{}
+\lstnewenvironment{cpluslisting}{\lstset{language=C++,basicstyle=\ttfamily\scriptsize}}{}
+
+
