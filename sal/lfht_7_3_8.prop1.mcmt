@@ -1,0 +1,1276 @@
+(define-state-type state
+     ((pc!0 Real)
+      (pc!1 Real)
+      (pc!2 Real)
+      (pc!3 Real)
+      (pc!4 Real)
+      (pc!5 Real)
+      (pc!6 Real)
+      (K Real)
+      (old Real)
+      (new Real)
+      (pending Real)
+      (did_not_pay Real)
+      (paid_tax Real)
+      (revenue Real)
+      (posted Real)
+      (ht!0!assimilated Bool)
+      (ht!0!num_entries Real)
+      (ht!0!num_to_migrate Real)
+      (ht!1!assimilated Bool)
+      (ht!1!num_entries Real)
+      (ht!1!num_to_migrate Real)
+      (ht!2!assimilated Bool)
+      (ht!2!num_entries Real)
+      (ht!2!num_to_migrate Real)))
+
+(define-states initial_states state
+        (and
+          (= pc!0 0)
+          (= pc!1 0)
+          (= pc!2 0)
+          (= pc!3 0)
+          (= pc!4 0)
+          (= pc!5 0)
+          (= pc!6 0)
+          (= pending 0)
+          (= did_not_pay 0)
+          (= paid_tax 0)
+          (= posted 0)
+          (= revenue 0)
+          (= K 32)
+          (= ht!0!assimilated false)
+          (= ht!0!num_entries 0)
+          (= ht!0!num_to_migrate 0)
+          (= ht!1!assimilated false)
+          (= ht!1!num_entries 0)
+          (= ht!1!num_to_migrate 0)
+          (= ht!2!assimilated false)
+          (= ht!2!num_entries 0)
+          (= ht!2!num_to_migrate 0)
+          (= old 1)
+          (= new 1)))
+
+(define-transition transition state
+        (let ((cond!1 (= old 2))
+              (cond!2 (= old 3))
+              (cs!815 (+ new 1))
+              (cond!3 (= new 2))
+              (cond!4 (= new 3))
+              (cond!11 (= new 1))
+              (cond!12 (= new 2))
+              (cond!13 (= new 3))
+              (cond!19 (= old 2))
+              (cond!20 (= old 3))
+              (cs!851 (< old new))
+              (cs!864 (< new 3))
+              (cs!873 (= pc!1' 1))
+              (cs!876 (= pc!0' 1))
+              (cs!877 (= pc!1' 0))
+              (cs!879 (= pc!1' 3))
+              (cs!881 (= pc!2' 1))
+              (cs!883 (= pc!2' 0))
+              (cs!885 (= pc!2' 3))
+              (cs!887 (= pc!3' 1))
+              (cs!890 (= pc!3' 0))
+              (cs!892 (= pc!3' 3))
+              (cs!894 (= pc!4' 1))
+              (cs!896 (= pc!4' 0))
+              (cs!898 (= pc!4' 3))
+              (cs!900 (= pc!5' 1))
+              (cs!902 (= pc!5' 0))
+              (cs!904 (= pc!5' 3))
+              (cond!27 (= old 1))
+              (cond!28 (= old 2))
+              (cond!29 (= old 3))
+              (cond!30 (= old 1))
+              (cond!31 (= old 2))
+              (cond!32 (= old 3))
+              (cs!908 (= paid_tax' (+ paid_tax 1)))
+              (cs!912 (= pc!6' 1))
+              (cs!913 (= pending' (+ pending 1)))
+              (cs!914 (= pc!0' 0))
+              (cs!915 (= posted' (+ posted 1)))
+              (cond!34 (= new 1))
+              (cond!35 (= new 2))
+              (cond!36 (= new 3))
+              (cs!919 (= pending' (- pending 1)))
+              (cs!920 (= did_not_pay' (- did_not_pay 1)))
+              (cs!921 (= K' (* K 2)))
+              (cs!922 (= old' new))
+              (cond!37 (= new 2))
+              (cond!38 (= new 3))
+              (cond!39 (= new 1))
+              (cond!40 (= new 2))
+              (cond!41 (= new 3))
+              (cs!925 (= did_not_pay' pending))
+              (cs!926 (= paid_tax' 0))
+              (cs!927 (= revenue' 0))
+              (cs!928 (= posted' 0))
+              (cs!929 (= pc!6' 0))
+              (cs!933 (= pc!6' 3))
+              (cs!934 (= K' K))
+              (cs!935 (= did_not_pay' did_not_pay))
+              (cs!936
+                    (and
+                      (= ht!0!assimilated' ht!0!assimilated)
+                      (= ht!0!num_entries' ht!0!num_entries)
+                      (= ht!0!num_to_migrate' ht!0!num_to_migrate)
+                      (= ht!1!assimilated' ht!1!assimilated)
+                      (= ht!1!num_entries' ht!1!num_entries)
+                      (= ht!1!num_to_migrate' ht!1!num_to_migrate)
+                      (= ht!2!assimilated' ht!2!assimilated)
+                      (= ht!2!num_entries' ht!2!num_entries)
+                      (= ht!2!num_to_migrate' ht!2!num_to_migrate)))
+              (cs!937 (= new' new))
+              (cs!938 (= old' old))
+              (cs!939 (= paid_tax' paid_tax))
+              (cs!940 (= pending' pending))
+              (cs!941 (= posted' posted))
+              (cs!942 (= revenue' revenue))
+              (cs!950 (= pc!0' 3)))
+          (let ((cs!816
+                     (cond
+                       (cond!4 ht!2!assimilated)
+                       (cond!3 ht!1!assimilated)
+                       (else ht!0!assimilated)))
+                (cs!818
+                      (cond
+                        (cond!4 ht!2!num_to_migrate)
+                        (cond!3 ht!1!num_to_migrate)
+                        (else ht!0!num_to_migrate)))
+                (cond!5 (= cs!815 2))
+                (cond!6 (= cs!815 3))
+                (cond!7 (= cs!815 1))
+                (cond!8 (= cs!815 2))
+                (cond!9 (= cs!815 3))
+                (cond!14 (= cs!815 2))
+                (cond!15 (= cs!815 3))
+                (cond!16 (= cs!815 1))
+                (cond!17 (= cs!815 2))
+                (cond!18 (= cs!815 3))
+                (cond!22 (= cs!815 2))
+                (cond!23 (= cs!815 3))
+                (cond!24 (= cs!815 1))
+                (cond!25 (= cs!815 2))
+                (cond!26 (= cs!815 3))
+                (cs!872 (= pc!1 0))
+                (cs!874 (= pc!0 0))
+                (cs!875 (= pc!1 1))
+                (cs!878 (= pc!1 2))
+                (cs!880 (= pc!2 0))
+                (cs!882 (= pc!2 1))
+                (cs!884 (= pc!2 2))
+                (cs!886 (= pc!3 0))
+                (cs!888 (= pc!3 1))
+                (cs!889 (= pc!0 1))
+                (cs!891 (= pc!3 2))
+                (cs!893 (= pc!4 0))
+                (cs!895 (= pc!4 1))
+                (cs!897 (= pc!4 2))
+                (cs!899 (= pc!5 0))
+                (cs!901 (= pc!5 1))
+                (cs!903 (= pc!5 2))
+                (cs!905 (= pc!6' pc!6))
+                (cs!910 (= pc!6 0))
+                (cs!917 (= pc!6 1))
+                (cs!923 (= new' cs!815))
+                (cs!930 (= pc!6 2))
+                (cs!932 (not cs!864))
+                (cs!943 (= pc!0' pc!0))
+                (cs!944 (= pc!1' pc!1))
+                (cs!945 (= pc!2' pc!2))
+                (cs!946 (= pc!3' pc!3))
+                (cs!947 (= pc!4' pc!4))
+                (cs!948 (= pc!5' pc!5))
+                (cs!949 (= pc!0 2)))
+            (let ((cs!819
+                       (cond
+                         (cond!2 ht!2!num_to_migrate)
+                         (cond!1 ht!1!num_to_migrate)
+                         (else ht!0!num_to_migrate)))
+                  (cs!820
+                        (ite cond!7
+                          (cond
+                            (cond!6 ht!2!assimilated)
+                            (cond!5 ht!1!assimilated)
+                            (else ht!0!assimilated))
+                          ht!0!assimilated))
+                  (cs!821 (ite cond!7 0 ht!0!num_entries))
+                  (cs!823
+                        (ite cond!8
+                          (cond
+                            (cond!6 ht!2!assimilated)
+                            (cond!5 ht!1!assimilated)
+                            (else ht!0!assimilated))
+                          ht!1!assimilated))
+                  (cs!824 (ite cond!8 0 ht!1!num_entries))
+                  (cs!826
+                        (ite cond!9
+                          (cond
+                            (cond!6 ht!2!assimilated)
+                            (cond!5 ht!1!assimilated)
+                            (else ht!0!assimilated))
+                          ht!2!assimilated))
+                  (cs!827 (ite cond!9 0 ht!2!num_entries))
+                  (cs!829
+                        (cond
+                          (cond!4 ht!2!num_entries)
+                          (cond!3 ht!1!num_entries)
+                          (else ht!0!num_entries)))
+                  (cs!830 (ite cond!11 cs!816 ht!0!assimilated))
+                  (cs!833 (ite cond!12 cs!816 ht!1!assimilated))
+                  (cs!836 (ite cond!13 cs!816 ht!2!assimilated))
+                  (cs!852
+                        (cond
+                          (cond!2 ht!2!assimilated)
+                          (cond!1 ht!1!assimilated)
+                          (else ht!0!assimilated))))
+              (let ((cond!10 (< 8 cs!819))
+                    (cs!840
+                          (ite cond!16
+                            (cond (cond!15 cs!827) (cond!14 cs!824) (else cs!821))
+                            cs!821))
+                    (cs!841
+                          (cond
+                            (cond!16 0)
+                            (cond!7
+                              (cond
+                                (cond!6 ht!2!num_to_migrate)
+                                (cond!5 ht!1!num_to_migrate)
+                                (else ht!0!num_to_migrate)))
+                            (else ht!0!num_to_migrate)))
+                    (cs!843
+                          (ite cond!17
+                            (cond (cond!15 cs!827) (cond!14 cs!824) (else cs!821))
+                            cs!824))
+                    (cs!844
+                          (cond
+                            (cond!17 0)
+                            (cond!8
+                              (cond
+                                (cond!6 ht!2!num_to_migrate)
+                                (cond!5 ht!1!num_to_migrate)
+                                (else ht!0!num_to_migrate)))
+                            (else ht!1!num_to_migrate)))
+                    (cs!846
+                          (ite cond!18
+                            (cond (cond!15 cs!827) (cond!14 cs!824) (else cs!821))
+                            cs!827))
+                    (cs!847
+                          (cond
+                            (cond!18 0)
+                            (cond!9
+                              (cond
+                                (cond!6 ht!2!num_to_migrate)
+                                (cond!5 ht!1!num_to_migrate)
+                                (else ht!0!num_to_migrate)))
+                            (else ht!2!num_to_migrate)))
+                    (cs!848
+                          (cond (cond!20 cs!836) (cond!19 cs!833) (else cs!830)))
+                    (cs!853 (< cs!829 K))
+                    (cs!863 (<= cs!829 (* K (/ 3 5))))
+                    (cs!906 (not cs!852))
+                    (cs!911 (or (not cs!851) cs!852))
+                    (cs!916
+                          (and
+                            (= ht!0!assimilated' (ite cond!34 cs!816 ht!0!assimilated))
+                            (=
+                              ht!0!num_entries'
+                              (ite cond!34 (+ cs!829 1) ht!0!num_entries))
+                            (=
+                              ht!0!num_to_migrate'
+                              (ite cond!34 cs!818 ht!0!num_to_migrate))
+                            (= ht!1!assimilated' (ite cond!35 cs!816 ht!1!assimilated))
+                            (=
+                              ht!1!num_entries'
+                              (ite cond!35 (+ cs!829 1) ht!1!num_entries))
+                            (=
+                              ht!1!num_to_migrate'
+                              (ite cond!35 cs!818 ht!1!num_to_migrate))
+                            (= ht!2!assimilated' (ite cond!36 cs!816 ht!2!assimilated))
+                            (=
+                              ht!2!num_entries'
+                              (ite cond!36 (+ cs!829 1) ht!2!num_entries))
+                            (=
+                              ht!2!num_to_migrate'
+                              (ite cond!36 cs!818 ht!2!num_to_migrate)))))
+                (let ((cs!831
+                           (ite cond!11
+                             (+ cs!829 (ite cond!10 8 cs!819))
+                             ht!0!num_entries))
+                      (cs!834
+                            (ite cond!12
+                              (+ cs!829 (ite cond!10 8 cs!819))
+                              ht!1!num_entries))
+                      (cs!837
+                            (ite cond!13
+                              (+ cs!829 (ite cond!10 8 cs!819))
+                              ht!2!num_entries))
+                      (cs!850 (- cs!819 (ite (< 8 cs!819) 8 cs!819)))
+                      (cs!854
+                            (and
+                              (not cond!24)
+                              (ite cond!16
+                                (cond (cond!15 cs!826) (cond!14 cs!823) (else cs!820))
+                                cs!820)))
+                      (cs!855
+                            (ite cond!24
+                              (cond (cond!23 cs!846) (cond!22 cs!843) (else cs!840))
+                              cs!840))
+                      (cs!857
+                            (and
+                              (not cond!25)
+                              (ite cond!17
+                                (cond (cond!15 cs!826) (cond!14 cs!823) (else cs!820))
+                                cs!823)))
+                      (cs!858
+                            (ite cond!25
+                              (cond (cond!23 cs!846) (cond!22 cs!843) (else cs!840))
+                              cs!843))
+                      (cs!860
+                            (and
+                              (not cond!26)
+                              (ite cond!18
+                                (cond (cond!15 cs!826) (cond!14 cs!823) (else cs!820))
+                                cs!826)))
+                      (cs!861
+                            (ite cond!26
+                              (cond (cond!23 cs!846) (cond!22 cs!843) (else cs!840))
+                              cs!846))
+                      (cs!909
+                            (= revenue' (+ revenue (ite (< 8 cs!819) 8 cs!819))))
+                      (cs!918 (not cs!853))
+                      (cs!931 (not cs!863)))
+                  (let ((cs!849
+                             (cond (cond!20 cs!837) (cond!19 cs!834) (else cs!831)))
+                        (cs!924
+                              (and
+                                (=
+                                  ht!0!assimilated'
+                                  (ite cond!39
+                                    (cond (cond!38 cs!860) (cond!37 cs!857) (else cs!854))
+                                    cs!854))
+                                (=
+                                  ht!0!num_entries'
+                                  (ite cond!39
+                                    (cond (cond!38 cs!861) (cond!37 cs!858) (else cs!855))
+                                    cs!855))
+                                (=
+                                  ht!0!num_to_migrate'
+                                  (cond
+                                    (cond!39 cs!829)
+                                    (cond!24
+                                      (cond (cond!23 cs!847) (cond!22 cs!844) (else cs!841)))
+                                    (else cs!841)))
+                                (=
+                                  ht!1!assimilated'
+                                  (ite cond!40
+                                    (cond (cond!38 cs!860) (cond!37 cs!857) (else cs!854))
+                                    cs!857))
+                                (=
+                                  ht!1!num_entries'
+                                  (ite cond!40
+                                    (cond (cond!38 cs!861) (cond!37 cs!858) (else cs!855))
+                                    cs!858))
+                                (=
+                                  ht!1!num_to_migrate'
+                                  (cond
+                                    (cond!40 cs!829)
+                                    (cond!25
+                                      (cond (cond!23 cs!847) (cond!22 cs!844) (else cs!841)))
+                                    (else cs!844)))
+                                (=
+                                  ht!2!assimilated'
+                                  (ite cond!41
+                                    (cond (cond!38 cs!860) (cond!37 cs!857) (else cs!854))
+                                    cs!860))
+                                (=
+                                  ht!2!num_entries'
+                                  (ite cond!41
+                                    (cond (cond!38 cs!861) (cond!37 cs!858) (else cs!855))
+                                    cs!861))
+                                (=
+                                  ht!2!num_to_migrate'
+                                  (cond
+                                    (cond!41 cs!829)
+                                    (cond!26
+                                      (cond (cond!23 cs!847) (cond!22 cs!844) (else cs!841)))
+                                    (else cs!847))))))
+                    (let ((cs!907
+                               (and
+                                 (=
+                                   ht!0!assimilated'
+                                   (cond
+                                     (cond!30 (<= cs!819 8))
+                                     (cond!27 cs!848)
+                                     (else cs!830)))
+                                 (=
+                                   ht!0!num_entries'
+                                   (cond (cond!30 cs!849) (cond!27 cs!849) (else cs!831)))
+                                 (=
+                                   ht!0!num_to_migrate'
+                                   (cond
+                                     (cond!30 cs!850)
+                                     (cond!27 cs!850)
+                                     (cond!11 cs!818)
+                                     (else ht!0!num_to_migrate)))
+                                 (=
+                                   ht!1!assimilated'
+                                   (cond
+                                     (cond!31 (<= cs!819 8))
+                                     (cond!28 cs!848)
+                                     (else cs!833)))
+                                 (=
+                                   ht!1!num_entries'
+                                   (cond (cond!31 cs!849) (cond!28 cs!849) (else cs!834)))
+                                 (=
+                                   ht!1!num_to_migrate'
+                                   (cond
+                                     (cond!31 cs!850)
+                                     (cond!28 cs!850)
+                                     (cond!12 cs!818)
+                                     (else ht!1!num_to_migrate)))
+                                 (=
+                                   ht!2!assimilated'
+                                   (cond
+                                     (cond!32 (<= cs!819 8))
+                                     (cond!29 cs!848)
+                                     (else cs!836)))
+                                 (=
+                                   ht!2!num_entries'
+                                   (cond (cond!32 cs!849) (cond!29 cs!849) (else cs!837)))
+                                 (=
+                                   ht!2!num_to_migrate'
+                                   (cond
+                                     (cond!32 cs!850)
+                                     (cond!29 cs!850)
+                                     (cond!13 cs!818)
+                                     (else ht!2!num_to_migrate))))))
+                      (or
+                        (and
+                          (or
+                            (and
+                              cs!874
+                              cs!851
+                              cs!906
+                              cs!907
+                              cs!913
+                              cs!908
+                              cs!909
+                              cs!876
+                              cs!934
+                              cs!935
+                              cs!937
+                              cs!938
+                              cs!941)
+                            (and
+                              cs!874
+                              cs!911
+                              cs!876
+                              cs!913
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!889
+                              cs!853
+                              cs!919
+                              cs!915
+                              (= pc!0' 2)
+                              cs!934
+                              cs!935
+                              cs!916
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!942)
+                            (and
+                              cs!889
+                              cs!918
+                              cs!919
+                              cs!920
+                              cs!914
+                              cs!934
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!949
+                              cs!931
+                              cs!864
+                              cs!921
+                              cs!922
+                              cs!923
+                              cs!924
+                              cs!925
+                              cs!926
+                              cs!927
+                              cs!928
+                              cs!914
+                              cs!940)
+                            (and
+                              cs!949
+                              cs!863
+                              cs!914
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!949
+                              cs!931
+                              cs!932
+                              cs!950
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              (= pc!0 3)
+                              cs!950
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942))
+                          cs!944
+                          cs!945
+                          cs!946
+                          cs!947
+                          cs!948
+                          cs!905)
+                        (and
+                          (or
+                            (and
+                              cs!872
+                              cs!851
+                              cs!906
+                              cs!907
+                              cs!913
+                              cs!908
+                              cs!909
+                              cs!873
+                              cs!934
+                              cs!935
+                              cs!937
+                              cs!938
+                              cs!941)
+                            (and
+                              cs!872
+                              cs!911
+                              cs!873
+                              cs!913
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!875
+                              cs!853
+                              cs!919
+                              cs!915
+                              (= pc!1' 2)
+                              cs!934
+                              cs!935
+                              cs!916
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!942)
+                            (and
+                              cs!875
+                              cs!918
+                              cs!919
+                              cs!920
+                              cs!877
+                              cs!934
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!878
+                              cs!931
+                              cs!864
+                              cs!921
+                              cs!922
+                              cs!923
+                              cs!924
+                              cs!925
+                              cs!926
+                              cs!927
+                              cs!928
+                              cs!877
+                              cs!940)
+                            (and
+                              cs!878
+                              cs!863
+                              cs!877
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!878
+                              cs!931
+                              cs!932
+                              cs!879
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              (= pc!1 3)
+                              cs!879
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942))
+                          cs!943
+                          cs!945
+                          cs!946
+                          cs!947
+                          cs!948
+                          cs!905)
+                        (and
+                          (or
+                            (and
+                              cs!880
+                              cs!851
+                              cs!906
+                              cs!907
+                              cs!913
+                              cs!908
+                              cs!909
+                              cs!881
+                              cs!934
+                              cs!935
+                              cs!937
+                              cs!938
+                              cs!941)
+                            (and
+                              cs!880
+                              cs!911
+                              cs!881
+                              cs!913
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!882
+                              cs!853
+                              cs!919
+                              cs!915
+                              (= pc!2' 2)
+                              cs!934
+                              cs!935
+                              cs!916
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!942)
+                            (and
+                              cs!882
+                              cs!918
+                              cs!919
+                              cs!920
+                              cs!883
+                              cs!934
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!884
+                              cs!931
+                              cs!864
+                              cs!921
+                              cs!922
+                              cs!923
+                              cs!924
+                              cs!925
+                              cs!926
+                              cs!927
+                              cs!928
+                              cs!883
+                              cs!940)
+                            (and
+                              cs!884
+                              cs!863
+                              cs!883
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!884
+                              cs!931
+                              cs!932
+                              cs!885
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              (= pc!2 3)
+                              cs!885
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942))
+                          cs!943
+                          cs!944
+                          cs!946
+                          cs!947
+                          cs!948
+                          cs!905)
+                        (and
+                          (or
+                            (and
+                              cs!886
+                              cs!851
+                              cs!906
+                              cs!907
+                              cs!913
+                              cs!908
+                              cs!909
+                              cs!887
+                              cs!934
+                              cs!935
+                              cs!937
+                              cs!938
+                              cs!941)
+                            (and
+                              cs!886
+                              cs!911
+                              cs!887
+                              cs!913
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!888
+                              cs!853
+                              cs!919
+                              cs!915
+                              (= pc!3' 2)
+                              cs!934
+                              cs!935
+                              cs!916
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!942)
+                            (and
+                              cs!888
+                              cs!918
+                              cs!919
+                              cs!920
+                              cs!890
+                              cs!934
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!891
+                              cs!931
+                              cs!864
+                              cs!921
+                              cs!922
+                              cs!923
+                              cs!924
+                              cs!925
+                              cs!926
+                              cs!927
+                              cs!928
+                              cs!890
+                              cs!940)
+                            (and
+                              cs!891
+                              cs!863
+                              cs!890
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!891
+                              cs!931
+                              cs!932
+                              cs!892
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              (= pc!3 3)
+                              cs!892
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942))
+                          cs!943
+                          cs!944
+                          cs!945
+                          cs!947
+                          cs!948
+                          cs!905)
+                        (and
+                          (or
+                            (and
+                              cs!893
+                              cs!851
+                              cs!906
+                              cs!907
+                              cs!913
+                              cs!908
+                              cs!909
+                              cs!894
+                              cs!934
+                              cs!935
+                              cs!937
+                              cs!938
+                              cs!941)
+                            (and
+                              cs!893
+                              cs!911
+                              cs!894
+                              cs!913
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!895
+                              cs!853
+                              cs!919
+                              cs!915
+                              (= pc!4' 2)
+                              cs!934
+                              cs!935
+                              cs!916
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!942)
+                            (and
+                              cs!895
+                              cs!918
+                              cs!919
+                              cs!920
+                              cs!896
+                              cs!934
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!897
+                              cs!931
+                              cs!864
+                              cs!921
+                              cs!922
+                              cs!923
+                              cs!924
+                              cs!925
+                              cs!926
+                              cs!927
+                              cs!928
+                              cs!896
+                              cs!940)
+                            (and
+                              cs!897
+                              cs!863
+                              cs!896
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!897
+                              cs!931
+                              cs!932
+                              cs!898
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              (= pc!4 3)
+                              cs!898
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942))
+                          cs!943
+                          cs!944
+                          cs!945
+                          cs!946
+                          cs!948
+                          cs!905)
+                        (and
+                          (or
+                            (and
+                              cs!899
+                              cs!851
+                              cs!906
+                              cs!907
+                              cs!913
+                              cs!908
+                              cs!909
+                              cs!900
+                              cs!934
+                              cs!935
+                              cs!937
+                              cs!938
+                              cs!941)
+                            (and
+                              cs!899
+                              cs!911
+                              cs!900
+                              cs!913
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!901
+                              cs!853
+                              cs!919
+                              cs!915
+                              (= pc!5' 2)
+                              cs!934
+                              cs!935
+                              cs!916
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!942)
+                            (and
+                              cs!901
+                              cs!918
+                              cs!919
+                              cs!920
+                              cs!902
+                              cs!934
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!903
+                              cs!931
+                              cs!864
+                              cs!921
+                              cs!922
+                              cs!923
+                              cs!924
+                              cs!925
+                              cs!926
+                              cs!927
+                              cs!928
+                              cs!902
+                              cs!940)
+                            (and
+                              cs!903
+                              cs!863
+                              cs!902
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!903
+                              cs!931
+                              cs!932
+                              cs!904
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              (= pc!5 3)
+                              cs!904
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942))
+                          cs!943
+                          cs!944
+                          cs!945
+                          cs!946
+                          cs!947
+                          cs!905)
+                        (and
+                          (or
+                            (and
+                              cs!910
+                              cs!851
+                              cs!906
+                              cs!907
+                              cs!913
+                              cs!908
+                              cs!909
+                              cs!912
+                              cs!934
+                              cs!935
+                              cs!937
+                              cs!938
+                              cs!941)
+                            (and
+                              cs!910
+                              cs!911
+                              cs!912
+                              cs!913
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!917
+                              cs!853
+                              cs!919
+                              cs!915
+                              (= pc!6' 2)
+                              cs!934
+                              cs!935
+                              cs!916
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!942)
+                            (and
+                              cs!917
+                              cs!918
+                              cs!919
+                              cs!920
+                              cs!929
+                              cs!934
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!930
+                              cs!931
+                              cs!864
+                              cs!921
+                              cs!922
+                              cs!923
+                              cs!924
+                              cs!925
+                              cs!926
+                              cs!927
+                              cs!928
+                              cs!929
+                              cs!940)
+                            (and
+                              cs!930
+                              cs!863
+                              cs!929
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              cs!930
+                              cs!931
+                              cs!932
+                              cs!933
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942)
+                            (and
+                              (= pc!6 3)
+                              cs!933
+                              cs!934
+                              cs!935
+                              cs!936
+                              cs!937
+                              cs!938
+                              cs!939
+                              cs!940
+                              cs!941
+                              cs!942))
+                          cs!943
+                          cs!944
+                          cs!945
+                          cs!946
+                          cs!947
+                          cs!948))))))))))
+
+(define-transition-system T state initial_states transition)
+
+;; Assumptions:
+
+;; every pc!i is in { 0, 1, 2, 3}
+(assume T
+  (and 
+   (or (= pc!0 0) (= pc!0 1) (= pc!0 2) (= pc!0 3))
+   (or (= pc!1 0) (= pc!1 1) (= pc!1 2) (= pc!1 3))
+   (or (= pc!2 0) (= pc!2 1) (= pc!2 2) (= pc!2 3))
+   (or (= pc!3 0) (= pc!3 1) (= pc!3 2) (= pc!3 3))
+   (or (= pc!4 0) (= pc!4 1) (= pc!4 2) (= pc!4 3))
+   (or (= pc!5 0) (= pc!5 1) (= pc!5 2) (= pc!5 3))
+   (or (= pc!6 0) (= pc!6 1) (= pc!6 2) (= pc!6 3))))
+
+
+;; every table_index (old, new) is in { 1, 2, 3}
+(assume T
+  (and 
+   (or (= old 1) (= old 2) (= old 3))
+   (or (= new 1) (= new 2) (= new 3))))
+
+(query T
+      (and
+        (or (not (< 1 old)) ht!0!assimilated)
+        (or (not (< 2 old)) ht!1!assimilated)
+        (or (not (< 3 old)) ht!2!assimilated)))
