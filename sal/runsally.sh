@@ -6,4 +6,7 @@ if [ $# -ne 1 ];then
 fi
 
 INPUT=$1
-sally --solver y2m5 --engine=pdkind --pdkind-add-backward $INPUT -v 3 --lsal-extensions --show-invariant --no-lets
+
+#PRINT_OPTS="--show-invariant --no-lets"
+PRINT_OPTS=""
+sally --solver y2m5 --engine=pdkind --pdkind-minimize-interpolants --pdkind-minimize-frames --pdkind-induction-max=1  $INPUT -v 1 --lsal-extensions ${PRINT_OPTS}
