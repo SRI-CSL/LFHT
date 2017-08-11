@@ -7,17 +7,21 @@ allocator attempts to minimize contention in multithreaded
 applications by maintaining a pool of independent heaps called \emph{arenas}.
 
 In a call to free, when chunks are preceeded by metadata, one can use
-simple offset calculations, and pointer chasing tricks to go from a
-chunk to it's arena. When metadata has been separated from the chunk
-this is no longer possible, and as a result we use lock free hash
-tables in order to determine the arena associated with the arbitrary
+simple offset calculations, and pointer-chasing tricks to go from a
+chunk to its arena. When metadata is separated from the chunk,
+this is no longer possible, and as a result we use lock-free hash
+tables in order to determine the arena associated with an arbitrary
 chunk.
 
-
 Implementing a fixed size lock-free linear probing hash table is a
-relatively simple task, there are many examples to be found online.
-Adding the additional requirement that it be dynamic, adds some
-interesting complications. Also requiring that old copies of the
-tables be released back to the operating system turns the task into a
-research project.
+relatively simple task. Many examples can be found online. An
+important aspect that is often not address is to allow the table to
+grow as more entries are added. This is key to ensure efficiency and
+low hash-collision rates. Growing the table leads to maintaining
+several verisons of the table: when the table grows, one must create a
+new larger, initially empty table and transfer the content from the
+current table to the new table. This creates a new difficulty: when
+and how can we reclaim the memory used by the old copy, in a lock-free
+fashion?
+
 

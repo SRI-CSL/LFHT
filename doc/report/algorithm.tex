@@ -1,3 +1,153 @@
 \section{Algorithm}
 \label{sec:algo}
 
+We develop a hash table that maps integral keys to integral
+values. The implementation supports insertion of new $(key,value)$
+pairs, updates of the value assigned to an existing key, removal of a
+key, and search. Updates and insertions are implemented by a single
+{\em add\/} operation. These operations can be performed concurrently
+by multiple threads. In the typical case, none of these operations
+require obtaining a lock.
+
+The underlying hash table algorithm we use is linear probing. The
+hash-table content is stored in a shared array. Each entry in that
+array is a pair that consists of 64-bit integers or pointers. Updates
+to this array are performed atomically using compare-and-swap (CAS)
+operations. Our algorithm attempts to keep the array less than 70\%
+full (this can be configured at compile time). When this threshold is
+exceeded, we allocate a fresh array of double the current capacity and
+migrate entries from the current array into this fresh array.
+
+\todo{A little sentence here to smooth the transition}.
+
+\subsection{Overview}
+
+Our hash table uses 64-bit keys and values. Table entries must be
+aligned on addresses that are multiples of four. These constraints are
+imposed by the CAS operations on Intel hardware. We also use the low-order
+bit of the keys as a mark.
+
+The hash table consists of a header and a linked list of
+dynamically-allocated arrays.  The first element in this list is the
+most recent copy of the table. The next element is an older copy and
+so forth.  In most cases, threads operate on the most current table
+(i.e., the first one in the list). When this table becomes full, we
+allocate a freh array of double its size and add it at the front of
+the list.  At this point, all threads that operate on the table are
+required to migrate entries from the old table to the head of the
+list. A key invariant that our algorithm maintains is that migration
+is always from the second table in the list to the first table. In
+other words, the current table cannot become full before the previous
+table has been completely migrated.  We say then that this table is
+{\em assimilated\/}.
+
+During the migration process, a thread that operates on the table must
+first copy a fixed number $M$ of key/values pairs from the old table
+to the new table. The number $M$ is chosen so that a new table cannot
+become full before the old table has been assimilated.
+
+To avoid running out of memory, it is desirable to free old copies of
+the table that are no longer needed. But, because of thread
+scheduling, some threads may keep pointers to old versions of the
+tables (i.e., elements deep in the linked list). We can only free old
+copies when we are sure that no threads have pointers to them. We use
+reference counting for this purpose. Maintaining correct reference
+counts introduces race conditions that we could not eliminate with
+CAS.  We then introduced a locking mechanism, which is used only in
+critical operations that are part of the migration process. Typical
+accesses to the table do not require locking.
+
+
+\subsection{Data Structures}
+
+\begin{figure}
+  \begin{center}
+    
+  \end{center}
+  \caption{Data Structures}
+  \label{fig:datastructures}
+\end{figure}
+
+A hash table consists of a
+  - hdr; the head of the linked list
+  - state; the table state 
+  - lock; a mutex
+
+In order to be able to update the state and hdr fields of a table
+atomically, they are stored as bit fields in a single 64 bit field.
+
+The linked list consists of one or more table_hdr structures.
+
+A table_hdr structure consists of:
+ - reference_count; the number of threads that can touch this structure
+ - assimilated; a flag indicating that all the data in the table has been migrated
+ - count; the number of non-zero keys in the table data
+ - table; the table data, an array of key value pairs used to accomodate the linear probing hash entries
+plus some other bookeeping fields that are needed to manage the table_hdr.
+
+
+A handle consists of:
+ - self; the identity of the thread owning it
+ - table; the hash table
+ - table_hdr; the thread's idea of the current table
+ - last; the oldest table the thread knows about
+
+
+When a thread creates a handle to a table, it increments the reference
+count of the current table, and if the table is expanding, also the
+next table in the linked list, which is the handle's last field.  If
+the table is not expanding, last is just the current table.
+
+Note that a handle may not be upto date. The list
+header may in fact point to a newer table, and not the handle's table_hdr
+field. However on creation we must ensure that it is upto date, and
+this is one of the critical sections that we must protect with a lock.
+
+Periodically a thread will ensure that its handle is upto date. During this process
+it may move it's last field, and decrement reference counts. Similarly
+at periodic intervals the last table in the linked list will be checked to see
+if it be reclaimed (i.e. has zero) reference count.
+
+
+\todo{This is old stuff. Move it to pseudocode?}
+
+So an active table can be in one of three states:
+
+0. the current table is the only table.
+
+1. there is more than one table, the current table is new, and its
+predecessor still contains key-value pairs that have not yet been
+migrated to the new table.
+
+2. there is more than one table, the current table is new, and its
+predecessor table has been assimilated, all key-value pairs have been
+migrated to the new table.
+
+
+So as a first approximation, our hash table consists of a state and a
+pointer to the list header, the front of the linked list of tables.
+The question then, is "how can we release old tables?" The problem is
+that, without additional information, there could always be slow
+threads that wake up thinking that the old table is the current active
+table.
+
+We solve this problem by using reference counting. A thread's access
+to the hash table is via a handle object. The add, remove, and find
+operations all must use a handle, rather than the table itself.  The
+handle maintains information about the thread's knowledge of the
+table. Of particular interest is the thread's current idea of which
+is the active table, and what is the oldest table the thread has
+an active interest in.
+
+
+
+Pseudo Code
+-----------
+
+TBD
+
+
+Critical Sections
+-----------------
+
+TDB
