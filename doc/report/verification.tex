@@ -1,5 +1,188 @@
 \section{Verification}
 \label{sec:veri}
 
-TODO: we have used SRI tools Sal~\cite{bensalem2000overview} and
-Sally~\cite{jovanovic2016property} ...
+We have modeled a simplified version of the \texttt{add} operation of
+our lock free hash table. \todo{list limitations of the model (e.g.,
+  counters updates are considered atomic}. We assume that there are
+$n$ threads that call \texttt{add} in an asynchronous
+manner. Figure~\ref{fig:model} shows the configuration diagram for for
+the \texttt{add} operation.
+
+\newcommand{\pczero}{init}
+\newcommand{\pcone}{migrated}
+\newcommand{\pctwo}{added}
+\newcommand{\pcthree}{error}
+\newcommand{\negate}[1]{\mbox{$\neg\ #1$}}
+\newcommand{\incr}{\mbox{\xspace$+\hspace{-1mm}=$\xspace}}
+\newcommand{\decr}{\mbox{\xspace$-\hspace{-1mm}=$\xspace}}
+    
+\begin{figure}[t]
+\begin{tikzpicture}[shorten >=1pt, node distance=5cm, on grid]
+  \node[draw,rectangle]   (q_0)      {$\pczero$};
+  \node[draw,rectangle] (q_1) [right=of q_0] {$\pcone$};
+  \node[draw,rectangle] (q_2) [right=of q_1] {$\pctwo$};
+  \node[draw,rectangle] (q_3) [right=of q_2] {$\pcthree$};
+  
+  \path[->](q_0) edge [bend left=45] node [below] {migrate} (q_1);
+  \path[->](q_0) edge [bend right]   node [below] {no-migrate} (q_1);
+  \path[->](q_1) edge                node [below] {reach-threshold} (q_0);
+  \path[->](q_1) edge                node [above] {add} (q_2);
+  \path[->](q_2) edge [bend right=50]  node [above] {grow} (q_0);
+  \path[->](q_2) edge [bend left=50]  node [above] {no-grow} (q_0);  
+  \path[->](q_2) edge                node [above] {out-of-mem} (q_3);  
+  \path[->](q_3) edge [loop above]   node  {} ();
+\end{tikzpicture}
+\caption{Configuration diagram for \texttt{add} operation}
+\label{fig:model}
+\end{figure}
+
+\vspace{2mm}
+\noindent \textbf{Initialization:}
+\vspace{2mm}
+
+\pcode[\small]{
+  $pc = \pczero$ \\
+  $K = 32$ \\
+  $ht = \emptyset$ \\
+  $old = 1$ \\
+  $new = 1$ \\
+  $pending = 0$ \\
+  $did\_not\_pay = 0$ \\
+  $paid\_tax = 0$ \\
+  $posted = 0$ \\
+  $revenue = 0$ 
+}
+
+\vspace{2mm}
+\noindent \textbf{Migrate:}
+\vspace{2mm}
+
+\pcode[\small]{
+  $pc=\pczero \wedge old \neq new \wedge ht_{old}.assimilated \rightarrow$ \\
+  \> $ht'_{new}.num\_entries \incr min(T, ht_{old}.num\_to\_migrate)$ \\
+  \> $ht'_{old}.num\_entries \decr min(T, ht_{old}.num\_to\_migrate)$ \\
+  \> $ht'_{old}.assimilated = (ht'_{old}.num\_to\_migrate = 0)$ \\
+  \> $pending' \incr 1$ \\
+  \> $paid\_tax' \incr 1$ \\
+  \> $revenue' \incr min(T,ht_{old}.num\_to\_migrate)$\\
+  \> $pc' = \pcone$
+}
+
+\vspace{2mm}
+\noindent \textbf{No Migrate:}
+\vspace{2mm}
+
+\pcode[\small]{
+  $pc=\pczero \wedge \negate{old \neq new \wedge ht_{old}.assimilated} \rightarrow$ \\
+  \> $pc' = \pcone$ \\
+  \> $pending' \incr 1$
+}
+
+\vspace{2mm}
+\noindent \textbf{Added:}
+\vspace{2mm}
+
+\pcode[\small]{
+  $pc=\pcone \wedge ht_{new}.num\_entries < K \rightarrow$ \\
+  \> $ht'_{new}.num\_entries \incr 1$ \\
+  \> $pending' \decr 1$ \\
+  \> $posted' \incr 1$ \\
+  \> $pc' = \pctwo$ 
+}
+
+\vspace{2mm}
+\noindent \textbf{Full Table:}
+\vspace{2mm}
+
+\pcode[\small]{
+  $pc=\pcone \wedge ht_{new}.num\_entries \geq K \rightarrow$ \\
+  \> $pending' \decr 1$ \\
+  \> $did\_not\_pay' \decr 1$ \\
+  \> $pc' = \pczero$ 
+}
+
+\vspace{2mm}
+\noindent \textbf{Grow Table:}
+\vspace{2mm}
+
+\pcode[\small]{
+  $pc=\pctwo \wedge ht_{new}.num\_entries > THRESHOLD \times K \wedge new < N \rightarrow$ \\
+  \> $K' = 2 \times K$ \\
+  \> $old' = new$ \\
+  \> $new' \incr 1$ \\
+  \> $ht'_{new+1}.num\_entries = 0$ \\
+  \> $ht'_{new+1}.num\_to\_migrate = 0$ \\
+  \> $ht'_{new+1}.assimilated = false$ \\
+  \> $ht'_{new}.num\_to\_migrate = ht_{new}.num\_entries$ \\                
+  \> $did\_not\_pay' = pending$ \\
+  \> $paid\_tax' = 0$ \\
+  \> $revenue' = 0$ \\
+  \> $posted' = 0$ \\
+  \> $pc' = \pczero$ 
+}
+
+\vspace{2mm}
+\noindent \textbf{No Grow Table:}
+\vspace{2mm}
+
+\pcode[\small]{
+  $pc=\pctwo \wedge ht_{new}.num\_entries \leq THRESHOLD \times K \rightarrow$ \\
+  \> $pc' = \pczero$ 
+}
+
+\vspace{2mm}
+\noindent \textbf{Out of Memory:}
+\vspace{2mm}
+
+\pcode[\small]{
+  $pc=\pctwo \wedge ht_{new}.num\_entries > THRESHOLD \times K \wedge new \geq N \rightarrow$ \\
+  \> $pc' = \pcthree$ 
+}
+
+\vspace{2mm}
+\noindent \textbf{Loop Forever:}
+\vspace{2mm}
+
+\pcode[\small]{
+  $pc=\pcthree \rightarrow pc'=\pcthree$ 
+}
+
+
+\vspace{2mm}
+\textbf{TODOs:}
+
+\begin{itemize}
+
+\item explain Figure~\ref{fig:model}.
+
+\item describe how we model a hash table. Say we do not model a
+  handle.
+  
+\item describe in detail the transition system.
+
+\item describe the property we want to prove.
+
+\item describe verification tools we considered: Sal\cite{sal2} and
+  Sally~\cite{sally}.
+  
+\item Proving the property with Sal
+  \begin{itemize}
+
+  \item The overall process was based on strengthening the property
+    (which is not inductive invariant) by adding new lemas obtained by
+    inspecting a failed proof for inductiveness.
+    
+  \item We required $x$ lemmas. Describe here the lemmas.
+  \end{itemize}
+
+\item Proving the property with Sally
+  \begin{itemize}
+  \item Still running after a couple of days. We have been able to
+    prove all lemmas except \textsf{upper} and the property
+  \end{itemize}
+  
+\end{itemize}
+
+
+
+

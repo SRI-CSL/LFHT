@@ -25,8 +25,8 @@
 \usepackage{remreset}
 \usepackage{color,colortbl}
 \usepackage{etoolbox}
-%\usepackage{tikz}
-
+\usepackage{tikz}
+\usetikzlibrary{positioning,shapes}
 
 %% if on then we remove all comments for the public
 \newtoggle{public}
@@ -44,6 +44,23 @@
 \newcommand{\jorge}[1]{{\bf\noindent \color{blue} Jorge: {#1}}}
 \newcommand{\ian}[1]{{\bf\noindent \color{red} Ian: {#1}}}
 \newcommand{\bruno}[1]{{\bf\noindent \color{green} Bruno: {#1}}}
+}
+
+%% un-framed pseudo-code.
+%% Usage: \pcode[size]{content}
+\newcommand{\codesize}{\normalsize}
+\newcommand{\pcode}[2][\codesize]{
+  %  \fbox{
+  \begin{small}
+    \begin{minipage}{0.5\linewidth}
+      #1
+      \begin{tabbing}
+        xx \= xx \= xx \= xx \= xx \= xx \= xx \= xx \= xx \= xx \= \kill
+        #2
+      \end{tabbing}
+    \end{minipage}
+  \end{small}
+%  }
 }
 
 
