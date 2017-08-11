@@ -61,36 +61,65 @@ accesses to the table do not require locking.
 \subsection{Data Structures}
 
 \begin{figure}
-  \begin{center}
-    
-  \end{center}
-  \caption{Data Structures}
-  \label{fig:datastructures}
+\begin{center}
+\begin{clisting}
+typedef struct lfht_entry_s {
+  volatile uint64_t  key;
+  volatile uint64_t  val;
+} lfht_entry_t;
+
+typedef struct lfht_hdr_s lfht_hdr_t;
+
+struct lfht_hdr_s {
+  atomic_uint_least32_t reference_count;
+  atomic_bool assimilated;
+  uint64_t sz;
+  uint32_t max;
+  uint32_t threshold;
+  atomic_uint_least32_t count;
+  lfht_hdr_t *next;
+  lfht_entry_t *table;
+};
+
+
+typedef struct lfht_s {
+  uintptr_t hdr:62, state:2;
+  pthread_mutex_t lock;
+} lfht_t;
+\end{clisting}
+\end{center}
+\caption{Data Structures}
+\label{fig:datastructures}
 \end{figure}
 
-A hash table consists of a
-  - hdr; the head of the linked list
-  - state; the table state 
-  - lock; a mutex
+Figure~\ref{fig:datastructures} shows the main datastructures. A hash
+table consists of a {\em descriptor\/} of type \texttt{lfht\_t} that
+stores a state, a pointer to the list of table, and a lock. Each
+element of the list is a structure of type \texttt{lfht\_hdr\_t}. It
+stores an array of entries, counters and sizes, and a pointer to the
+next list element.
 
-In order to be able to update the state and hdr fields of a table
-atomically, they are stored as bit fields in a single 64 bit field.
+%% - hdr; the head of
+%% the linked list - state; the table state - lock; a mutex
 
-The linked list consists of one or more table_hdr structures.
+%% In order to be able to update the state and hdr fields of a table
+%% atomically, they are stored as bit fields in a single 64 bit field.
 
-A table_hdr structure consists of:
- - reference_count; the number of threads that can touch this structure
- - assimilated; a flag indicating that all the data in the table has been migrated
- - count; the number of non-zero keys in the table data
- - table; the table data, an array of key value pairs used to accomodate the linear probing hash entries
-plus some other bookeeping fields that are needed to manage the table_hdr.
+%% The linked list consists of one or more table_hdr structures.
+
+%% A table_hdr structure consists of:
+%%  - reference_count; the number of threads that can touch this structure
+%%  - assimilated; a flag indicating that all the data in the table has been migrated
+%%  - count; the number of non-zero keys in the table data
+%%  - table; the table data, an array of key value pairs used to accomodate the linear probing hash entries
+%% plus some other bookeeping fields that are needed to manage the table_hdr.
 
 
-A handle consists of:
- - self; the identity of the thread owning it
- - table; the hash table
- - table_hdr; the thread's idea of the current table
- - last; the oldest table the thread knows about
+%% A handle consists of:
+%%  - self; the identity of the thread owning it
+%%  - table; the hash table
+%%  - table_hdr; the thread's idea of the current table
+%%  - last; the oldest table the thread knows about
 
 
 When a thread creates a handle to a table, it increments the reference
@@ -99,7 +128,7 @@ next table in the linked list, which is the handle's last field.  If
 the table is not expanding, last is just the current table.
 
 Note that a handle may not be upto date. The list
-header may in fact point to a newer table, and not the handle's table_hdr
+header may in fact point to a newer table, and not the handle's table\_hdr
 field. However on creation we must ensure that it is upto date, and
 this is one of the critical sections that we must protect with a lock.
 
