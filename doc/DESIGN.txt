@@ -3,7 +3,7 @@ Overview
 
 Our hash table uses uint64_t keys and values.  We insist on 4 byte
 aligned keys, (if they are pointers they will usually have much
-greater alignment), but 4 is more than we need. (2 byte would be
+greater alignment), but 4 is more than we need. (2 bytes would be
 enough).
 
 The underlying hash table algorithm we use is linear probing. The

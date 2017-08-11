@@ -1,10 +1,10 @@
 \section{Motivation}
 \label{sec:intro}
 
-Our interest in lock free hash tables arose naturally from the needs
+Our interest in lock-free hash tables arose naturally from the needs
 of a metadataless version of the glibc memory allocator.  The glibc
 allocator attempts to minimize contention in multithreaded
-applications by maintaining a pool of independent heaps called arenas.
+applications by maintaining a pool of independent heaps called \emph{arenas}.
 
 In a call to free, when chunks are preceeded by metadata, one can use
 simple offset calculations, and pointer chasing tricks to go from a
@@ -14,7 +14,7 @@ tables in order to determine the arena associated with the arbitrary
 chunk.
 
 
-Implementing a fixed size lock free linear probing hash table is a
+Implementing a fixed size lock-free linear probing hash table is a
 relatively simple task, there are many examples to be found online.
 Adding the additional requirement that it be dynamic, adds some
 interesting complications. Also requiring that old copies of the
