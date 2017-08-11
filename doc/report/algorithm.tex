@@ -85,17 +85,24 @@ typedef struct lfht_s {
   uintptr_t hdr:62, state:2;
   pthread_mutex_t lock;
 } lfht_t;
+
+typedef struct lfht_handle_s {
+  pthread_t owner;
+  lfht_t *table;
+  lfht_hdr_t *table_hdr;
+  lfht_hdr_t *last;  
+} lfht_handle_t;
 \end{clisting}
 \end{center}
 \caption{Data Structures}
 \label{fig:datastructures}
 \end{figure}
 
-Figure~\ref{fig:datastructures} shows the main datastructures. A hash
+Figure~\ref{fig:datastructures} shows the main data structures. A hash
 table consists of a {\em descriptor\/} of type \texttt{lfht\_t} that
-stores a state, a pointer to the list of table, and a lock. Each
+stores a state, a pointer to the list of table headers, and a lock. Each
 element of the list is a structure of type \texttt{lfht\_hdr\_t}. It
-stores an array of entries, counters and sizes, and a pointer to the
+stores an array of entries, each of type \texttt{lfht\_entry\_t}, counters and sizes, and a pointer to the
 next list element.
 
 %% - hdr; the head of
