@@ -3,8 +3,8 @@
 
 %% if on then we remove all comments for the public
 \newtoggle{public}
-\toggletrue{public}
-%\togglefalse{public}
+%\toggletrue{public}
+\togglefalse{public}
 
 %%% For final version
 \iftoggle{public}{%
@@ -61,5 +61,13 @@
   breakatwhitespace=false}
 \lstnewenvironment{clisting}{\lstset{language=C,basicstyle=\ttfamily\scriptsize}}{}
 \lstnewenvironment{cpluslisting}{\lstset{language=C++,basicstyle=\ttfamily\scriptsize}}{}
+
+\newtheorem{example}{Example}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{property}{Property}
 
 
