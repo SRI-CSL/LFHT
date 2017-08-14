@@ -428,10 +428,14 @@ already populated by the same key (or an assimilated variant in the
 case of \texttt{\_lfht\_add}). If an empty slot is found, then both operations
 perform a 128 bit CAS, replacing both the key and value in one atomic action.
 If the key is already present, then the \texttt{\_lfht\_move} operation simply
-returns; the \texttt{\_lfht\_add} operation performs a !@* bit CAS if the key
+returns; the \texttt{\_lfht\_add} operation performs a 128 bit CAS if the key
 is not marked as assimilated, otherwise it fails. It is important that these operations
-perform a 128 bit CAS in the dynamically expanding scenario.
-
+perform a 128 bit CAS in the dynamically expanding scenario.\footnote{Race Condition: if one simply
+  did a 64 bit CAS of the key followed by 64 bit CAS of the value, then key value pairs can get lost.
+  This happens when one thread is adding a new key value pair to the table, but is operating on the
+  old table. Once it adds the key, another thread that is migrating values could look at the
+  key value pair, deduce that it has been tombstoned, and mark it as assimilated. In this way
+  the new value can be lost.}
 
 
 
