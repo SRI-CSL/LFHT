@@ -32,14 +32,14 @@ dynamically-allocated arrays.  The first element in this list is the
 most recent copy of the table. The next element is an older copy and
 so forth.  In most cases, threads operate on the most current table
 (i.e., the first one in the list). When this table becomes full, we
-allocate a freh array of double its size and add it at the front of
+allocate a fresh array of double its size and add it at the front of
 the list.  At this point, all threads that operate on the table are
-required to migrate entries from the old table to the head of the
-list. A key invariant that our algorithm maintains is that migration
-is always from the second table in the list to the first table. In
-other words, the current table cannot become full before the previous
-table has been completely migrated.  We say then that this table is
-{\em assimilated\/}.
+required to migrate entries from the old table to the new current
+table, the head of the list. A key invariant that our algorithm
+maintains is that migration is always from the second table in the
+list to the first table. In other words, the current table cannot
+become full before the previous table has been completely migrated.
+We say then that this table is {\em assimilated\/}.
 
 During the migration process, a thread that operates on the table must
 first copy a fixed number $M$ of key/values pairs from the old table
@@ -85,13 +85,6 @@ typedef struct lfht_s {
   uintptr_t hdr:62, state:2;
   pthread_mutex_t lock;
 } lfht_t;
-
-typedef struct lfht_handle_s {
-  pthread_t owner;
-  lfht_t *table;
-  lfht_hdr_t *table_hdr;
-  lfht_hdr_t *last;  
-} lfht_handle_t;
 \end{clisting}
 \end{center}
 \caption{Data Structures}
@@ -100,64 +93,35 @@ typedef struct lfht_handle_s {
 
 Figure~\ref{fig:datastructures} shows the main data structures. A hash
 table consists of a {\em descriptor\/} of type \texttt{lfht\_t} that
-stores a state, a pointer to the list of table headers, and a lock. Each
+stores a state, a pointer to the list of table headers, and a lock.
+The pointer to the list and the state are stored as a single 64 bit integer
+to allow us to atomically update them.
+Each
 element of the list is a structure of type \texttt{lfht\_hdr\_t}. It
 stores an array of entries, each of type \texttt{lfht\_entry\_t}, counters and sizes, and a pointer to the
 next list element.
 
-%% - hdr; the head of
-%% the linked list - state; the table state - lock; a mutex
+A table can be in one of four states:
 
-%% In order to be able to update the state and hdr fields of a table
-%% atomically, they are stored as bit fields in a single 64 bit field.
+\begin{center}
+\begin{clisting}
+typedef enum lfht_state { INITIAL, EXPANDING, EXPANDED, FINAL } lfht_state_t;
+\end{clisting}
+\end{center}
 
-%% The linked list consists of one or more table_hdr structures.
+\begin{enumerate}
+\item The current table is the only table.
 
-%% A table_hdr structure consists of:
-%%  - reference_count; the number of threads that can touch this structure
-%%  - assimilated; a flag indicating that all the data in the table has been migrated
-%%  - count; the number of non-zero keys in the table data
-%%  - table; the table data, an array of key value pairs used to accomodate the linear probing hash entries
-%% plus some other bookeeping fields that are needed to manage the table_hdr.
-
-
-%% A handle consists of:
-%%  - self; the identity of the thread owning it
-%%  - table; the hash table
-%%  - table_hdr; the thread's idea of the current table
-%%  - last; the oldest table the thread knows about
-
-
-When a thread creates a handle to a table, it increments the reference
-count of the current table, and if the table is expanding, also the
-next table in the linked list, which is the handle's last field.  If
-the table is not expanding, last is just the current table.
-
-Note that a handle may not be upto date. The list
-header may in fact point to a newer table, and not the handle's table\_hdr
-field. However on creation we must ensure that it is upto date, and
-this is one of the critical sections that we must protect with a lock.
-
-Periodically a thread will ensure that its handle is upto date. During this process
-it may move it's last field, and decrement reference counts. Similarly
-at periodic intervals the last table in the linked list will be checked to see
-if it be reclaimed (i.e. has zero) reference count.
-
-
-\todo{This is old stuff. Move it to pseudocode?}
-
-So an active table can be in one of three states:
-
-0. the current table is the only table.
-
-1. there is more than one table, the current table is new, and its
+\item  There is more than one table, the current table is new, and its
 predecessor still contains key-value pairs that have not yet been
 migrated to the new table.
 
-2. there is more than one table, the current table is new, and its
+\item There is more than one table, the current table is new, and its
 predecessor table has been assimilated, all key-value pairs have been
 migrated to the new table.
 
+\item The table has been reclaimed.
+\end{enumerate}
 
 So as a first approximation, our hash table consists of a state and a
 pointer to the list header, the front of the linked list of tables.
@@ -166,23 +130,415 @@ that, without additional information, there could always be slow
 threads that wake up thinking that the old table is the current active
 table.
 
-We solve this problem by using reference counting. A thread's access
-to the hash table is via a handle object. The add, remove, and find
-operations all must use a handle, rather than the table itself.  The
-handle maintains information about the thread's knowledge of the
-table. Of particular interest is the thread's current idea of which
+We solve this problem by using reference counting.
+All hash table operations must be made using a per-thread {\em handle\/}. The handle is  a
+structure of type \texttt{lfht\_handle\_t}, and stores
+the identifier of the thread that owns it, a pointer to the table, a pointer to the handle's notion
+of the current table header, and the oldest table header that the thread has an interest in.
+
+\begin{center}
+\begin{clisting}
+typedef struct lfht_handle_s {
+  pthread_t owner;
+  lfht_t *table;
+  lfht_hdr_t *table_hdr;
+  lfht_hdr_t *last;  
+} lfht_handle_t;
+\end{clisting}
+\end{center}
+
+Of particular interest is the thread's current idea of which
 is the active table, and what is the oldest table the thread has
 an active interest in.
 
 
+When a thread creates a handle to a table, it increments the reference
+count of the current table, and if the table is expanding, also the
+next table in the linked list, which is the handle's \texttt{last} field.  If
+the table is not expanding, \texttt{last} is just the current table header.
 
-Pseudo Code
------------
+Note that a handle may not be upto date. The list
+header stored in the \texttt{table} field may in fact point to a newer table header,
+and not the handle's \texttt{table\_hdr}
+field. However on creation we must ensure that it is upto date, and
+this is one of the critical sections that we must protect with a lock.
+An crucial invariant that we maintain is that a thread has incremented
+every table header from the it's \texttt{table\_hdr} to it's \texttt{last}
+field.
 
-TBD
+Periodically a thread will ensure that its handle is upto date. During this process
+it may move it's last field, and decrement reference counts. Similarly
+at periodic intervals the last table in the linked list will be checked to see
+if it be reclaimed (i.e. has zero) reference count.
 
 
-Critical Sections
------------------
+\subsection{Algorithms}
 
-TDB
+
+We describe the process of initializing a handle, updating a handle, and then using that handle
+to add an entry to the table. The actual creation of the table is routine,
+and can be gleaned from the source code\cite{lfht2017}.
+
+\begin{center}
+\begin{clisting}
+void init_handle(lfht_handle_t *h, lfht_t* table){
+  lfht_hdr_t *actual, *next;
+  h->owner = pthread_self();
+  h->table = table;
+  pthread_mutex_lock(&table->lock);
+  actual = lfht_table_hdr(table);
+  next = actual->next;
+  atomic_fetch_add(&actual->reference_count, 1);
+  if(next != NULL && !table_is_assimilated(next)){
+    atomic_fetch_add(&next->reference_count, 1);
+    h->last = next;
+  } else {
+    h->last = actual;
+  }
+  h->table_hdr = actual;
+  pthread_mutex_unlock(&table->lock);
+}
+\end{clisting}
+\end{center}
+
+\begin{center}
+\begin{clisting}
+static bool upto_date(lfht_handle_t *h){
+  return lfht_table_hdr(h->table) == h->table_hdr;
+}
+
+static void update_handle(lfht_handle_t *h){
+  lfht_t *table;
+  lfht_hdr_t *actual, *current, *last, *p;
+  int prior_count;
+  bool assimilated;
+  table = h->table;
+  actual = lfht_table_hdr(table);
+  current  = h->table_hdr;
+  last = h->last;
+  prior_count = 2;
+  if(actual == current){
+    return;
+  }
+  h->table_hdr = actual;
+  /* increment to the left */
+  p = actual;
+  while(true){
+    atomic_fetch_add(&p->reference_count, 1);
+    p = p->next;
+    if(p == current){ break; }
+  }
+  if(current == last){  return; }
+  /* decrement to the right till last */
+  p = current->next;
+  while(true){
+    assimilated = table_is_assimilated(p);
+    assert(assimilated);
+    prior_count = atomic_fetch_sub(&p->reference_count, 1);
+    if(p == last){ break; }
+    p = p->next;
+  }
+  h->last = current;
+  if(prior_count == 1){
+    /* good time to do a free table check? */
+    free_table_check(h->table, "update_handle", true);
+  }
+}
+\end{clisting}
+\end{center}
+
+\begin{center}
+\begin{clisting}
+bool lfht_add(lfht_handle_t *h, uint64_t key, uint64_t val){
+  uint32_t hash;
+  bool retval;
+  bool current;
+  lfht_hdr_t *table_hdr;
+  uint_least32_t count;
+  int32_t migrated;
+  hash = jenkins_hash_ptr((void *)key);
+  while(true){
+    migrated = _migrate_table(h, key, hash);
+    retval = _lfht_add(h, key, hash, val);
+    current = upto_date(h);
+    if( retval && current ){ break; }
+    if( ! current ){ update_handle(h); }
+  }
+  table_hdr = h->table_hdr;
+  count = atomic_load(&table_hdr->count);
+  if (count >= table_hdr->threshold){
+    _grow_table(h->table, table_hdr);
+  }
+  return retval;
+}
+
+\end{clisting}
+\end{center}
+
+
+
+
+%grow_table
+\begin{center}
+\begin{clisting}
+bool _grow_table(lfht_t *ht,  lfht_hdr_t *hdr){
+  lfht_hdr_t *ohdr, *nhdr;
+  bool retval = false;
+  uint32_t omax, nmax;
+  pthread_mutex_lock(&ht->lock);
+  ohdr = lfht_table_hdr(ht);
+  /* check to see if someone beat us to it */
+  if(hdr == ohdr){
+    omax = ohdr->max;
+    if (omax < MAX_TABLE_SIZE) {
+      nmax = 2 * ohdr->max;
+      nhdr  = alloc_lfht_hdr(nmax);
+      if (nhdr != NULL){
+	nhdr->next = ohdr;
+	lfht_set(ht, nhdr, EXPANDING);
+	retval = true;
+      }
+    }
+  }
+  pthread_mutex_unlock(&ht->lock);
+  return retval;
+}
+
+\end{clisting}
+\end{center}
+
+%migrate_table
+\begin{center}
+\begin{clisting}
+static int32_t _migrate_table(lfht_handle_t *h, uint64_t key, uint32_t hash){
+  int table_state;
+  lfht_t *ht;
+  lfht_hdr_t *hdr;
+  lfht_hdr_t *ohdr;
+  uint32_t moved;
+  bool finished, assimilated;
+  int32_t migrated = -1;
+  
+ restart:
+
+  update_handle(h);
+  ht = h->table;
+  table_state = lfht_state(ht);
+  if (table_state == EXPANDING){
+    /* gotta try and pitch in and do some migrating */
+    hdr = lfht_table_hdr(ht);
+    ohdr = hdr->next;
+    if (!upto_date(h) ){ goto restart; }
+    if(hdr == h->last){ return migrated; }
+    moved = assimilate(h, ohdr, key, hash,  MIGRATIONS_PER_ACCESS);
+    finished = moved < MIGRATIONS_PER_ACCESS;
+    assimilated = false;
+    migrated = moved;
+    if (finished  &&  atomic_compare_exchange_strong(&ohdr->assimilated, &assimilated, true)){
+      pthread_mutex_lock(&ht->lock);
+      /* we hold the lock so ht->table_hdr cannot change while we are in here. */
+      if (lfht_state(ht) == EXPANDING  && lfht_table_hdr(ht) == hdr){
+	lfht_set(ht, hdr, EXPANDED);
+        free_table_check(h->table, "_migrate_table", false);
+      }
+      pthread_mutex_unlock(&ht->lock);
+    }
+  }
+  return migrated;
+}
+\end{clisting}
+\end{center}
+
+%assimilate
+\begin{center}
+\begin{clisting}
+static uint32_t assimilate(lfht_handle_t *h, lfht_hdr_t *from_hdr, uint64_t key, uint32_t hash,  uint32_t count){
+  uint32_t retval, mask, j, i;
+  lfht_entry_t current;
+  uint64_t akey;
+  lfht_entry_t*  table;
+  bool success;
+  /* success indicates that the key is either not in the table or has been assimilated */
+  success = false;
+  retval = 0;
+  mask = from_hdr->max - 1;
+  table = from_hdr->table;
+  if (table_is_assimilated(from_hdr)) {
+    return retval;
+  }
+  j = hash & mask;
+  i = j;
+  while (true) {
+    current = table[i];
+    if (current.key == 0 || key_equal(current.key, key)) {
+      success = true;
+    }
+    /*
+     * move the current entry to the new table if it has the key we want,
+     * or if its key is non zero and not assimilated and we haven't moved our quota yet.
+     */
+    if (current.key == key ||
+	(retval < count && current.key != 0 && !key_is_assimilated(current.key))) {
+      /*
+       * ***WARNING****
+       *
+       *  we cannot CAS the key, then move the key val pair, then increment the counters
+       *  because we could be the last one, and go to sleep before we increment,
+       *  and never wake before the new table fills.
+       *
+       *  an actual bug that was revealed by the logging.
+       */
+      if (current.val != TOMBSTONE){
+	_lfht_move(h, current.key, jenkins_hash_ptr((void *)current.key), current.val);
+      }
+      akey = set_assimilated(current.key);
+      if(cas_64((volatile uint64_t *)&(table[i].key), current.key, akey)){
+	retval ++;
+      }
+    }
+    if (success && retval >= count){
+      break;
+    }
+    i++;
+    i &= mask;
+    if ( i == j ){
+      break;
+    }
+  }
+  return retval;
+}
+\end{clisting}
+\end{center}
+
+
+We are left with describing the two operations that deal with the linear probing aspects
+of the underlying table:  \texttt{\_lfht\_move} and \texttt{\_lfht\_add}. The move operation
+is the workhorse of \texttt{assimilation} and is simpler in that it can assume that it either
+adds the new key-value pair, or else does nothing, if the key is already in the table, it
+can safely assume that some other thread has already performed the task. As a result
+the move operation should never fail. \texttt{\_lfht\_add} on the other hand must
+handle both the replace case, and the situation where the key has been marked as assimilated.
+This latter case can arise if the table has grown out from under the thread, and other threads
+have been busily migrating keys in the meantime.
+
+Both operations take a handle, a key, the hash of the key, and the
+desired value. They commence traversing the array at the position
+associated with the hash, looking for an empty slot, or a slot that is
+already populated by the same key (or an assimilated variant in the
+case of \texttt{\_lfht\_add}). If an empty slot is found, then both operations
+perform a 128 bit CAS, replacing both the key and value in one atomic action.
+If the key is already present, then the \texttt{\_lfht\_move} operation simply
+returns; the \texttt{\_lfht\_add} operation performs a !@* bit CAS if the key
+is not marked as assimilated, otherwise it fails. It is important that these operations
+perform a 128 bit CAS in the dynamically expanding scenario.
+
+
+
+
+%_lfht_move
+\begin{center}
+\begin{clisting}
+static void _lfht_move(lfht_handle_t *h, uint64_t key, uint32_t hash, uint64_t val){
+  uint32_t mask, j, i;
+  lfht_hdr_t *hdr;
+  lfht_entry_t*  table;
+  lfht_entry_t current;
+  lfht_entry_t desired;
+  lfht_t *ht;
+
+  ht = h->table;
+  hdr = lfht_table_hdr(ht);
+  table = hdr->table;
+  mask = hdr->max - 1;
+  j = hash & mask;
+  i = j;
+  desired.key = key;
+  desired.val = val;
+  while (true) {
+    current = table[i];
+    if (current.key == 0){
+      /* 
+       * have to do a 128 bit cas here, otherwise a slow move thread can let a find thread think
+       * this key has been tombstoned
+       */
+      if (cas_128((volatile u128_t *)&(table[i]), *((u128_t *)&current),  *((u128_t *)&desired))){
+        atomic_fetch_add(&hdr->count, 1);
+        goto exit;
+      } else {
+        continue;
+      }
+    }
+    if ( current.key ==  key ){
+      goto exit;
+    }
+    i++;
+    i &= mask;
+    if (i == j) break;
+  }
+  /* should never fail */
+  assert(false);
+ exit:
+}
+\end{clisting}
+\end{center}
+
+
+
+
+%_lfht_add
+\begin{center}
+\begin{clisting}
+static bool _lfht_add(lfht_handle_t *h, uint64_t key, uint32_t hash, uint64_t val){
+  uint32_t mask, j, i;
+  lfht_hdr_t *hdr;
+  lfht_entry_t*  table;
+  lfht_entry_t current;
+  lfht_entry_t desired;
+  bool retval;
+  lfht_t *ht;
+  ht = h->table;
+  retval = false;
+  hdr = lfht_table_hdr(ht);
+  table = hdr->table;
+  mask = hdr->max - 1;
+  j = hash & mask;
+  i = j;
+  desired.key = key;
+  desired.val = val;
+  while (true) {
+    current = table[i];
+    if (current.key == 0){
+      /* 
+       * have to do a 128 bit cas here, otherwise a slow add thread can let a find thread think
+       * this key has been tombstoned
+       */
+      if (cas_128((volatile u128_t *)&(table[i]), *((u128_t *)&current),  *((u128_t *)&desired))){
+        atomic_fetch_add(&hdr->count, 1);
+	retval = true;
+        goto exit;
+      } else {
+        continue;
+      }
+    }
+    if ( key_equal(current.key, key) ){
+      if( key_is_assimilated(current.key) ){
+        retval = false;
+        goto exit;
+      } else {
+	if (cas_128((volatile u128_t *)&(table[i]), *((u128_t *)&current),  *((u128_t *)&desired))){
+          retval = true;
+          goto exit;
+        } else {
+          continue;
+        }
+      }
+    }
+    i++;
+    i &= mask;
+    if (i == j) break;
+  }
+ exit:
+  return retval;
+}
+\end{clisting}
+\end{center}
