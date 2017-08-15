@@ -207,7 +207,7 @@ The actual creation of the table is routine,
 and can be gleaned from the source code\cite{lfht2017}.
 
 
-The process of initialing a \texttt{lfht\_handle\_t} object is relatively simple.
+The process of initializing a \texttt{lfht\_handle\_t} object is relatively simple.
 We set the \texttt{owner} and  \texttt{table} fields to the appropriate objects.
 We then block until we have obtained the table's \texttt{lock}. Once we have the lock
 we can retrieve the current table header, increment its reference count, and
@@ -252,7 +252,7 @@ void init_handle(lfht_handle_t *h, lfht_t* table){
 \end{clisting}
 \end{center}
 
-While we take care to ensure that upon intialization a thread's handle is upto date,
+While we take care to ensure that upon initialization a thread's handle is upto date,
 we cannot maintain such an invariant. However the handle is designed so that it is particularly
 easy to determine if it is upto date or not, using the  \texttt{upto\_date} routine.
 A thread's handle is no longer upto date in the situation when the table has been grown by another thread.
@@ -311,7 +311,7 @@ static void update_handle(lfht_handle_t *h){
 \end{clisting}
 \end{center}
 
-Adding a key value pair using the \texttt{lfht\_add} to a table is a good illustration of
+Adding a key value pair to a table using the \texttt{lfht\_add} is a good illustration of
 how we use the handle. We first compute the hash of the key. We then attempt to participate in any
 migrating that might be required. We will describe the migration process in detail shortly, and
 simply make two remarks in passing. It is important that we begin the migration from the hash of the
@@ -324,7 +324,11 @@ If we succeeded but our handle is no longer upto date, then we have added to the
 and we need to try again with the new table. If we did not succeed, then either that table
 was full, or else the key has already been assimilated (and we are not  upto date). In either case
 we need to update our handle and try again. Note that if we failed because the table is full, then
-we are relying on another thread to grow the table.\footnote{We could spin for a long time here}.
+we are relying on another thread to grow the table. This is sound since each of those threads that
+successfully added to the table beyond its threshold will try their luck at growing the table. One will
+succeed. When we finally successfully added to the table, and are upto date, we increment the
+table header's entry \texttt{count}, and if the new value is no longer smaller than the threshold
+we attempt to grow the table.
 
 
 
@@ -355,6 +359,17 @@ bool lfht_add(lfht_handle_t *h, uint64_t key, uint64_t val){
 \end{center}
 
 
+A thread calls to \texttt{\_grow\_table} when the thread's current table header has reached
+the threshold. It is quite likely that there will be contention for this task, so 
+we pass in the thread's current table header so as to be able to detect if the table
+has already grown. The actual task of growing the table is relatively simple, we allocate
+a new table header that is twice the size\footnote{Since our main application is a memory
+allocator, we use \texttt{mmap} to allocate table header memory.}
+and set it as the current header, and the state of the table to be \texttt{EXPANDING}.
+We do this under the protection of the lock, not because there are any race conditions
+involved in the process (we could easily do this atomically with a 64 bit CAS), but because
+other threads may be in delicate operations, such a initializing a new handle to the table,
+or trndling down the table header list looking for tables to reclaim.
 
 
 %grow_table
