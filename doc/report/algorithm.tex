@@ -16,7 +16,7 @@ to this array are performed atomically using compare-and-swap (CAS)
 operations. Our algorithm attempts to keep the array less than 70\%
 full (this can be configured at compile time). When this threshold is
 exceeded, we allocate a fresh array of double the current capacity and
-migrate entries from the current array into this fresh array.
+migrate entries from the current array into this fresh array.\footnote{Mention tombstones}
 
 \todo{A little sentence here to smooth the transition}.
 
@@ -101,6 +101,38 @@ element of the list is a structure of type \texttt{lfht\_hdr\_t}. It
 stores an array of entries, each of type \texttt{lfht\_entry\_t}, counters and sizes, and a pointer to the
 next list element.
 
+The operations to deconstruct the bit fields of \texttt{lfht\_t} object are the following three
+routines.
+\begin{center}
+\begin{clisting}
+static inline lfht_hdr_t *lfht_table_hdr(const lfht_t* ht){
+  return (lfht_hdr_t *)(uintptr_t)(ht->hdr << 2);
+}
+
+static inline lfht_state_t lfht_state(const lfht_t* ht){
+  return ht->state;
+}
+
+static inline void lfht_set(lfht_t* ht, lfht_hdr_t * hdr, lfht_state_t state){
+  ht->state = state;
+  ht->hdr = (uintptr_t)hdr >> 2;
+}
+\end{clisting}
+\end{center}
+
+
+Even though we can atomically update the \texttt{state} and
+\texttt{hdr} fields of a table descriptor\footnote{Use this
+  terminology uniformly?}  we protect them by a lock. There are three
+places in our algorithm where we rely on the fact that if we obtain
+the lock, then the \texttt{state} and \texttt{hdr} fields will not
+change.  These are when we first initialize a handle, when we grow the
+table, and when we see if we can reclaim an old assimilated table.
+
+Each of these three places have resisted all our efforts to eliminate the race conditions
+with non-locking means. We have had no success.
+
+
 A table can be in one of four states:
 
 \begin{center}
@@ -109,19 +141,11 @@ typedef enum lfht_state { INITIAL, EXPANDING, EXPANDED, FINAL } lfht_state_t;
 \end{clisting}
 \end{center}
 
-\begin{enumerate}
-\item The current table is the only table.
-
-\item  There is more than one table, the current table is new, and its
+1. The current table is the only table. 2. There is more than one table, the current table is new, and its
 predecessor still contains key-value pairs that have not yet been
-migrated to the new table.
-
-\item There is more than one table, the current table is new, and its
+migrated to the new table. 3. There is more than one table, the current table is new, and its
 predecessor table has been assimilated, all key-value pairs have been
-migrated to the new table.
-
-\item The table has been reclaimed.
-\end{enumerate}
+migrated to the new table. 4. The table has been reclaimed.
 
 So as a first approximation, our hash table consists of a state and a
 pointer to the list header, the front of the linked list of tables.
@@ -176,8 +200,25 @@ if it be reclaimed (i.e. has zero) reference count.
 
 
 We describe the process of initializing a handle, updating a handle, and then using that handle
-to add an entry to the table. The actual creation of the table is routine,
+to add an entry to the table. In the process will will have to describe both the growing of the table,
+and the migration of entries from the previous table to the
+current.\footnote{Do we also want to describe the reclamation process?}
+The actual creation of the table is routine,
 and can be gleaned from the source code\cite{lfht2017}.
+
+
+The process of initialing a \texttt{lfht\_handle\_t} object is relatively simple.
+We set the \texttt{owner} and  \texttt{table} fields to the appropriate objects.
+We then block until we have obtained the table's \texttt{lock}. Once we have the lock
+we can retrieve the current table header, increment its reference count, and
+assign it to the handle's \texttt{table\_hdr} field. If the previous table header
+is not assimilated, we presume that the thread maybe required to migrate entries,
+and so we increment its reference count as well. Recording the fact that
+the \texttt{last} field points to the {\em last}  \texttt{table\_hdr} in the list
+whose reference count we have incremented.
+We must protect this operation by obtaining the mutex to ensure that the \texttt{actual}
+is in fact pointing to the current table header.
+
 
 \begin{center}
 \begin{clisting}
@@ -185,10 +226,20 @@ void init_handle(lfht_handle_t *h, lfht_t* table){
   lfht_hdr_t *actual, *next;
   h->owner = pthread_self();
   h->table = table;
+  /* the lock is to prevent the table->table_hdr from changing before we can increment the counter */
   pthread_mutex_lock(&table->lock);
   actual = lfht_table_hdr(table);
+  /*
+   * if the lock was not held, actual could by this point be out of date, and so we would actually
+   * miss incrementing the current table's reference count.
+   */
   next = actual->next;
   atomic_fetch_add(&actual->reference_count, 1);
+  /* 
+   * if there is an old table, and it is not assimilated, then we will
+   * probably need to help migrate it, so we increment its reference count.
+   *
+   */
   if(next != NULL && !table_is_assimilated(next)){
     atomic_fetch_add(&next->reference_count, 1);
     h->last = next;
@@ -201,6 +252,21 @@ void init_handle(lfht_handle_t *h, lfht_t* table){
 \end{clisting}
 \end{center}
 
+While we take care to ensure that upon intialization a thread's handle is upto date,
+we cannot maintain such an invariant. However the handle is designed so that it is particularly
+easy to determine if it is upto date or not, using the  \texttt{upto\_date} routine.
+A thread's handle is no longer upto date in the situation when the table has been grown by another thread.
+Once a thread determines that it's handle is no longer upto date, it must rectify the problem.
+Note that because we have no control over thread scheduling, we cannot assume that
+the table has only been grown once. In fact it is reasonable to assume that the table
+has in fact been grown an arbitrary finite number of times. As a result updating
+a handle requires not only updating the table header field, but also making sure
+that our reference counts are accurate. This involves incrementing the reference counts
+of new table headers, and decrementing the counts of our, now stale, older table headers.
+It is in this process that we rely on the fact that the handle's \texttt{last} field
+points to the oldest table whose reference count has been incremented by the handle's owning thread.
+Also note that since a handle is local to a thread, there are by definition no races here.
+
 \begin{center}
 \begin{clisting}
 static bool upto_date(lfht_handle_t *h){
@@ -208,15 +274,13 @@ static bool upto_date(lfht_handle_t *h){
 }
 
 static void update_handle(lfht_handle_t *h){
-  lfht_t *table;
-  lfht_hdr_t *actual, *current, *last, *p;
-  int prior_count;
+  lfht_hdr_t *p;
   bool assimilated;
-  table = h->table;
-  actual = lfht_table_hdr(table);
-  current  = h->table_hdr;
-  last = h->last;
-  prior_count = 2;
+  lfht_t *table = h->table;
+  lfht_hdr_t *actual = lfht_table_hdr(table);
+  lfht_hdr_t *current  = h->table_hdr;
+  lfht_hdr_t *last = h->last;
+  int prior_count = 2;
   if(actual == current){
     return;
   }
@@ -247,18 +311,33 @@ static void update_handle(lfht_handle_t *h){
 \end{clisting}
 \end{center}
 
+Adding a key value pair using the \texttt{lfht\_add} to a table is a good illustration of
+how we use the handle. We first compute the hash of the key. We then attempt to participate in any
+migrating that might be required. We will describe the migration process in detail shortly, and
+simply make two remarks in passing. It is important that we begin the migration from the hash of the
+key we are interesting in, because we can then be confident that its current value, if any, is in
+the current table. Secondly the migration process endevors to ensure that the thread handle is upto date.
+Once we have performed our migration duties, we then proceed to add the key value pair to the
+table \texttt{\_lfht\_add}, if we succeed, and the handle is upto date still, then we increment
+the table header's count, and check to see if the table needs to grow.
+If we succeeded but our handle is no longer upto date, then we have added to the old table,
+and we need to try again with the new table. If we did not succeed, then either that table
+was full, or else the key has already been assimilated (and we are not  upto date). In either case
+we need to update our handle and try again. Note that if we failed because the table is full, then
+we are relying on another thread to grow the table.\footnote{We could spin for a long time here}.
+
+
+
+
 \begin{center}
 \begin{clisting}
 bool lfht_add(lfht_handle_t *h, uint64_t key, uint64_t val){
-  uint32_t hash;
-  bool retval;
-  bool current;
+  bool retval, current;
   lfht_hdr_t *table_hdr;
   uint_least32_t count;
-  int32_t migrated;
-  hash = jenkins_hash_ptr((void *)key);
+  uint32_t hash = jenkins_hash_ptr((void *)key);
   while(true){
-    migrated = _migrate_table(h, key, hash);
+    _migrate_table(h, key, hash);
     retval = _lfht_add(h, key, hash, val);
     current = upto_date(h);
     if( retval && current ){ break; }
