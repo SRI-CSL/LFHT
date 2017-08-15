@@ -1,3 +1,5 @@
+\newcommand{\HT}[1]{\mbox{$ht[#1]$}}
+
 \section{Verification}
 \label{sec:veri}
 
@@ -77,7 +79,10 @@ respectively.
 \todo{Describe \texttt{pending}, \texttt{did\_not\_pay},
   \texttt{paid\_tax}, \texttt{posted}, and \texttt{revenue}.}
 
-\todo{Describe N and MAX (threshold)}
+\todo{Describe (and better names) N (number of arrays), MAX
+  (occupation percentage before growing), k (size of the new table), T
+  (number of entries to migrate), and NUM\_THREADS (number of
+  threads)}
 
 \subsubsection{Transitions}
 
@@ -86,7 +91,7 @@ respectively.
 \begin{minipage}{\linewidth}
 \pcode[\small]{
   $state := \pczero$ \\
-  $ht_{i\in \{1,\ldots,N\}} := \{ num\_to\_entries := 0, num\_to\_migrate := 0, assimilated := false \}$ \\  
+  $\HT{i\in \{1,\ldots,N\}} := \{ num\_to\_entries := 0, num\_to\_migrate := 0, assimilated := false \}$ \\  
   $k := 32$ \\
   $old := new := 1$ \\
   $pending := did\_not\_pay := paid\_tax := posted := revenue := 0$}
@@ -96,13 +101,13 @@ respectively.
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pczero \wedge old \neq new \wedge ht_{old}.assimilated \rightarrow$ \\
-  \> $ht_{new}.num\_entries \incr min(T, ht_{old}.num\_to\_migrate)$ \\
-  \> $ht_{old}.num\_entries \decr min(T, ht_{old}.num\_to\_migrate)$ \\
-  \> $ht_{old}.assimilated := (ht'_{old}.num\_to\_migrate = 0)$ \\
+  $state=\pczero \wedge old \neq new \wedge \HT{old}.assimilated \rightarrow$ \\
+  \> $\HT{new}.num\_entries \incr min(T, \HT{old}.num\_to\_migrate)$ \\
+  \> $\HT{old}.num\_entries \decr min(T, \HT{old}.num\_to\_migrate)$ \\
+  \> $\HT{old}.assimilated := (ht'_{old}.num\_to\_migrate = 0)$ \\
   \> $pending \incr 1$ \\
   \> $paid\_tax \incr 1$ \\
-  \> $revenue \incr min(T,ht_{old}.num\_to\_migrate)$\\
+  \> $revenue \incr min(T,\HT{old}.num\_to\_migrate)$\\
   \> $state := \pcone$}
 \end{minipage}
 
@@ -111,7 +116,7 @@ respectively.
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pczero \wedge \negate{old \neq new \wedge ht_{old}.assimilated} \rightarrow$ \\
+  $state=\pczero \wedge \negate{old \neq new \wedge \HT{old}.assimilated} \rightarrow$ \\
   \> $pending \incr 1$ \\
   \> $state := \pcone$}
 \end{minipage}
@@ -120,8 +125,8 @@ respectively.
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pcone \wedge ht_{new}.num\_entries < k \rightarrow$ \\
-  \> $ht_{new}.num\_entries \incr 1$ \\
+  $state=\pcone \wedge \HT{new}.num\_entries < k \rightarrow$ \\
+  \> $\HT{new}.num\_entries \incr 1$ \\
   \> $pending \decr 1$ \\
   \> $posted \incr 1$ \\
   \> $state := \pctwo$}
@@ -131,7 +136,7 @@ respectively.
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pcone \wedge ht_{new}.num\_entries \geq k \rightarrow$ \\
+  $state=\pcone \wedge \HT{new}.num\_entries \geq k \rightarrow$ \\
   \> $pending \decr 1$ \\
   \> $did\_not\_pay \decr 1$ \\
   \> $state := \pczero$}
@@ -141,14 +146,14 @@ respectively.
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pctwo \wedge ht_{new}.num\_entries > MAX \times k \wedge new < N \rightarrow$ \\
+  $state=\pctwo \wedge \HT{new}.num\_entries > MAX \times k \wedge new < N \rightarrow$ \\
   \> $k := 2 \times k$ \\
   \> $old := new$ \\
   \> $new \incr 1$ \\
-  \> $ht_{new+1}.num\_entries := 0$ \\
-  \> $ht_{new+1}.num\_to\_migrate := 0$ \\
-  \> $ht_{new+1}.assimilated := false$ \\
-  \> $ht_{new}.num\_to\_migrate := ht_{new}.num\_entries$ \\                
+  \> $\HT{new+1}.num\_entries := 0$ \\
+  \> $\HT{new+1}.num\_to\_migrate := 0$ \\
+  \> $\HT{new+1}.assimilated := false$ \\
+  \> $\HT{new}.num\_to\_migrate := \HT{new}.num\_entries$ \\                
   \> $did\_not\_pay := pending$ \\
   \> $paid\_tax :=  revenue := posted := 0$ \\
   \> $state := \pczero$}
@@ -158,7 +163,7 @@ respectively.
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pctwo \wedge ht_{new}.num\_entries \leq MAX \times k \rightarrow$ \\
+  $state=\pctwo \wedge \HT{new}.num\_entries \leq MAX \times k \rightarrow$ \\
   \> $state := \pczero$}
 \end{minipage}
 
@@ -166,7 +171,7 @@ respectively.
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pctwo \wedge ht_{new}.num\_entries > MAX \times k \wedge new \geq N \rightarrow$ \\
+  $state=\pctwo \wedge \HT{new}.num\_entries > MAX \times k \wedge new \geq N \rightarrow$ \\
   \> $state := \pcthree$}
 \end{minipage}
 
@@ -192,7 +197,7 @@ copies. Informally, for all indexes $i \in \{1, \ldots, N\}$ such that
 $i < old$ then the array $i$ must be assimilated. This can be stated
 more formally as follows:
 
-  \[ G(\forall 1 \leq i \leq N.~ i < old \Rightarrow ht_{i}.assimilated) \]
+  \[ G(\forall 1 \leq i \leq N.~ i < old \Rightarrow \HT{i}.assimilated) \]
 
 Current verification technology can only hope for proving whether a
 property is \emph{inductive invariant}. Informally, given a state
@@ -209,15 +214,16 @@ $x$, we say that a property $Inv(x)$ is inductive invariant if:
 Unfortunately, the key invariant we wish to prove is not inductive
 invariant. A common solution to this problem is to find a
 \emph{strengthening} of the property we want to prove, $Inv'(x)$, such
-that the resulting formula becomes inductive. That is,
+that $Inv(x)$ in conjunction with $Inv'(x)$ becomes inductive. That
+is,
 
 \begin{enumerate}
 \item $Init(x) \Rightarrow (Inv(x) \wedge Inv'(x))$
 \item $(Inv(x) \wedge Inv'(x)) \wedge Tr(x,x') \Rightarrow (Inv(x') \wedge Inv'(x'))$
 \end{enumerate}
 
-Another effective technique, complementary to this strenghtening
-process, is $k$-induction~\cite{MouraRS03}, a generalization of
+Complementary to strenghtening, another effective technique is
+$k$-induction~\cite{MouraRS03}, which is a generalization of
 induction\footnote{Induction is $k$-induction for $k=1$.}. We say a
 property $Inv(x)$ is $k$-inductive if:
 
@@ -253,161 +259,236 @@ process. The overall process was based on strengthening the property
 by adding new lemas obtained by inspecting a failed proof for
 inductiveness. We were able to prove semi-automatically that our key
 invariant holds up to 6 threads. For that, we needed to come up with
-30 lemmas described as follows.
+32 lemmas.
+
+\todo{Group lemmas by categories}.
 
 \begin{lemma} %lemma1
   $G((new = 1 \wedge old = 1) \vee (new = old+1))$
+    \label{lemma1}
 \end{lemma}
 
 \begin{lemma} %lemma2
-  $G(\forall 1 \leq i \leq N.  \wedge i > new \Rightarrow \mathsf{empty}(ht_i))$
+  $G(\forall 1 \leq i \leq N.  \wedge i > new \Rightarrow \mathsf{empty}(\HT{i}))$
 
-  \noindent where $\mathsf{empty}(ht_i)= ht_i.num\_entries = 0 \wedge
-  ht_i.num\_to\_migrate = 0 \wedge \negate{ht_i.assimilated}$
-  
+  \noindent where $\mathsf{empty}(\HT{i})= \HT{i}.num\_entries = 0 \wedge
+  \HT{i}.num\_to\_migrate = 0 \wedge \negate{\HT{i}.assimilated}$
+  \label{lemma2}  
 \end{lemma}  
 
-\begin{lemma} %lemma2b
- $G(\forall 1 \leq i \leq N.  \wedge \negate{\mathsf{full}(i, ht_i)}
-  \wedge \mathsf{size}(i,ht_i) \Rightarrow \forall i < j \leq N.
-  \Rightarrow \mathsf{empty}(ht_j))$
-\end{lemma}  
+\begin{lemma} %lemma2a
+ $G(\forall 1 \leq i \leq N.  \wedge \negate{\mathsf{full}(i, \HT{i})}
+  \wedge \mathsf{size}(i,\HT{i}) \Rightarrow \forall i < j \leq N.
+  \Rightarrow \mathsf{empty}(\HT{j}))$
 
-\noindent where $\mathsf{full}(i, ht_i)= \ldots$, and \\
-$\mathsf{size}(i, ht_i)=\ldots$
+\noindent where $\mathsf{full}(i, \HT{i})= \ldots$, and \\
+$\mathsf{size}(i, \HT{i})=\ldots$
+  \label{lemma2a}
+\end{lemma}
 
 \begin{lemma} %lemma3
-  $G(\forall 1 \leq i \leq N. ht_i.num\_to\_migrate \leq ht_i.num\_entries)$
+  $G(\forall 1 \leq i \leq N. \HT{i}.num\_to\_migrate \leq \HT{i}.num\_entries)$
+    \label{lemma3}
 \end{lemma}  
 
 \begin{lemma} %lemma4
   $G(size(new,K))$
+    \label{lemma4}
 \end{lemma}  
 
 \begin{lemma} %lemma5a
-  $G(\negate{ht_{new}.assimilated})$
+  $G(\negate{\HT{new}.assimilated})$
+    \label{lemma5a}
 \end{lemma}  
 
 \begin{lemma} %lemma5b
-  $G(ht_{new}.num\_to\_migrate = 0)$
+  $G(\HT{new}.num\_to\_migrate = 0)$
+    \label{lemma5b}
 \end{lemma}  
 
 \begin{lemma} %lemma5c 
-  $G(old = new \vee full(old, ht_{old}.num\_entries))$
+  $G(old = new \vee full(old, \HT{old}.num\_entries))$
+    \label{lemma5c}
 \end{lemma}  
 
 \begin{lemma} %lemma5e
-  $G(\forall 1 \leq i \leq N. \negate{full(i,ht_{i})} \Rightarrow \negate{ht_{i}.assimilated})$
+  $G(\forall 1 \leq i \leq N. \negate{full(i,\HT{i})} \Rightarrow \negate{\HT{i}.assimilated})$
+  \label{lemma5e}  
 \end{lemma}  
 
 \begin{lemma} %lemma5f
-  $G(\forall 1 \leq i \leq N. \negate{full(i,ht_{i})} \Rightarrow \negate{ht_{i}.num\_to\_migrate = 0})$
+  $G(\forall 1 \leq i \leq N. \negate{full(i,\HT{i})} \Rightarrow \negate{\HT{i}.num\_to\_migrate = 0})$
+  \label{lemma5f}
 \end{lemma}  
 
 \begin{lemma} %lemma5g
-  $G(\forall 1 \leq i \leq N. ht_{i}.assimilated \Rightarrow ht_{i}.num\_to\_migrate = 0)$
+  $G(\forall 1 \leq i \leq N. \HT{i}.assimilated \Rightarrow \HT{i}.num\_to\_migrate = 0)$
+  \label{lemma5g}  
 \end{lemma}  
 
 \begin{lemma} %lemma6
   \begin{equation*}
     \begin{array}{l}
     G(\forall 1 \leq i \leq N. i \leq old \wedge old < new \Rightarrow  \\
-    \quad (\mathsf{full}(i, ht_{i}) \Rightarrow ht_{i}.num\_to\_migrate = 0 \Longleftrightarrow ht_{i}.assimilated) \wedge \\
-    \quad (\negate{\mathsf{full}(i, ht_{i})} \Rightarrow \negate{(ht_{i}.num\_to\_migrate = 0 \wedge ht_{i}.assimilated)}))
+    \quad (\mathsf{full}(i, \HT{i}) \Rightarrow \HT{i}.num\_to\_migrate = 0 \Longleftrightarrow \HT{i}.assimilated) \wedge \\
+    \quad (\negate{\mathsf{full}(i, \HT{i})} \Rightarrow \negate{(\HT{i}.num\_to\_migrate = 0 \wedge \HT{i}.assimilated)}))
     \end{array}
   \end{equation*}
+  \label{lemma6}  
 \end{lemma}  
 
 \begin{lemma} % lemma8b
   \begin{equation*}
     \begin{array}{l}
-      G( old \neq new \wedge \mathsf{migrated}(ht,old) = 0 \wedge ht_{new}.num\_entries = 0 \Rightarrow \\
+      G( old \neq new \wedge \mathsf{migrated}(ht,old) = 0 \wedge \HT{new}.num\_entries = 0 \Rightarrow \\
       \exists 1 \leq i \leq NUM\_THREADS. state[i] = \pczero)
     \end{array}
   \end{equation*}
 
   where $\mathsf{migrated} = \ldots$
+  \label{lemma8b}
 \end{lemma}
 
 \begin{lemma} %pending_pos
-  $G()$
+  $G(pending \geq 0)$
+  \label{pending-pos}
 \end{lemma}  
 
 \begin{lemma} %pending_upper
-  $G()$
+  $G(pending \leq NUM\_THREADS)$
+  \label{pending-upper}
 \end{lemma}  
 
 \begin{lemma} %did_not_pay_1
-  $G()$
+  $G(did\_not\_pay < NUM\_THREADS)$
+    \label{did-not-pay-1}    
 \end{lemma}  
 
 \begin{lemma} %paid_tax_0
-  $G()$
+  $G( old = new \Rightarrow paid\_tax = 0)$
+  \label{paid-tax-0}    
 \end{lemma}  
 
 \begin{lemma} %paid_tax_1
-  $G()$
+  $G(paid\_tax \geq 0)$
+    \label{paid-tax-1}  
 \end{lemma}
 
 \begin{lemma} %revenue_0
-  $G()$
+  $G(old = new \Rightarrow revenue = 0)$
+  \label{revenue0}    
 \end{lemma}
 
 \begin{lemma} %revenue_1
-  $G()$
+  $G( revenue \geq 0)$
+  \label{revenue1}    
 \end{lemma}
 
 \begin{lemma} %revenue_2
-  $G()$
+  $G(old < new \Rightarrow revenue = \mathsf{migrated}(ht,old))$
+  \label{revenue2}    
 \end{lemma}
 
 \begin{lemma} %revenue_3
-  $G()$
+  $G(old < new \Rightarrow revenue \leq \HT{old}.num\_entries)$
+  \label{revenue3}    
 \end{lemma}
 
 \begin{lemma} %revenue_4
-  $G()$
+  $G(old < new \wedge \HT{old}.num\_to\_migrate > 0 \Rightarrow revenue = T \times paid\_tax)$
+  \label{revenue4}    
 \end{lemma}
 
 \begin{lemma} %revenue_5
-  $G()$
+  $G(old < new \wedge \HT{old}.num\_to\_migrate > 0 \Rightarrow revenue = \HT{old}.num\_entries)$
+  \label{revenue5}  
 \end{lemma}
 
 \begin{lemma} %posted_0
-  $G()$
+  $G(posted \geq 0)$
+  \label{posted0}  
 \end{lemma}
 
 \begin{lemma} %posted_1
-  $G()$
+  $G(old < new \wedge h_{old}.assimilated \Rightarrow posted+ pending = paid\_tax + did\_not\_pay)$
+  \label{posted1}
+\end{lemma}
+
+\begin{lemma} %final
+  $G(\exists 1 \leq i \leq NUM\_THREADS. state[i] = \pcthree \Rightarrow new = N)$
+  \label{final}  
+\end{lemma}
+
+
+\begin{lemma} %upper_global
+  $G(\forall 1 \leq i < N. \HT{i}.num\_entries \leq (MAX \times \mathsf{max\_size}(i)) + NUM\_THREADS)$
+  \label{upper-global}
 \end{lemma}
 
 \begin{lemma} %upper
-  $G()$
+  $G(old < new \wedge \negate{\HT{old}.assimilated} \Rightarrow \HT{new}.num\_entries \leq \mathsf{migrated}(ht,old) + (\mathsf{migrated}(ht,old) / T) + (NUM\_THREADS -1) + pending)$
+  \label{upper}
+\end{lemma}
+
+\begin{lemma} %upper_strengthening_2
+  $G(old < new \Rightarrow \HT{new}.num\_entries \leq T \times paid\_tax + posted)$
+  \label{upper-strengthening-2}
 \end{lemma}
 
 \begin{lemma} %upper_strengthening_3
-  $G()$
-\end{lemma}
-
-\begin{lemma} %upper_strengthening_3a
-  $G()$
+  $G(old < new \wedge \HT{old}.num\_to\_migrate \geq t \Rightarrow \HT{new}.num\_entries = T * paid\_tax + posted)$
+  \label{upper-strengthening-3}  
 \end{lemma}
 
 \begin{lemma} %upper_strengthening_5
-  $G()$
+  $G(old < new \Rightarrow \HT{new}.num\_entries =\mathsf{migrated}(ht,old) + posted )$
+  \label{upper-strengthening-5}  
 \end{lemma}
 
 
-\paragraph{Experiments.}
+\paragraph{Experiments.} TODO
 
-\todo{add experiments: for each lemma value of $k$ and time. We show
-  up to 6 threads}
 
-%% \begin{tabular}{|l|l|}
-%%   \hline
-%%   \textsf{Lemma} & \textsf{Assumptions} \\
-%%   \hline \\
+\begin{figure}[t]
+  \begin{center}
+    \begin{tabular}{|l|l|}
+      \hline
+      \textsf{Lemma} & \textsf{Assumed Lemmas} \\
+      \hline     
+      \ref{lemma1}   & $\emptyset$  \\
+      \ref{lemma2}   & $\{$ \ref{lemma1} $\}$ \\
+      \ref{lemma2a}  & $\emptyset$  \\
+      \ref{lemma3}   & $\emptyset$  \\
+      \ref{lemma4}   & $\emptyset$  \\
+      \ref{lemma5a}  & $\{$ \ref{lemma1},\ref{lemma4} $\}$ \\
+      \ref{lemma5b}  & $\{$ \ref{lemma1},\ref{lemma4} $\}$ \\
+      \ref{lemma5c}  & $\{$ \ref{lemma1},\ref{lemma4} $\}$ \\
+      \ref{lemma5e}  & $\{$ \ref{lemma4},\ref{lemma5c} $\}$ \\
+      \ldots & \\
+      \hline 
+    \end{tabular}
+    \caption{Assumed lemmas}
+    \label{lemma-dependencies}
+    \end{center}
+\end{figure}
 
-%% \end{tabular}
+
+\begin{figure}[t]
+  \begin{center}
+    \begin{tabular}{|c|l|l|}
+      \hline
+      \textsf{\# Threads} & \textsf{K} & \textsf{Time(seconds)} \\
+      \hline
+      2 & & \\
+      3 & & \\
+      4 & & \\
+      5 & & \\
+      6 & &  \\
+      \hline 
+    \end{tabular}
+    \caption{Proving key invariant with Sal 2 up to 6 threads}
+    \label{sal-results}
+    \end{center}
+\end{figure}
 
 
