@@ -1,4 +1,4 @@
-\documentclass[12pt]{cslreport}
+\documentclass[twoside,12pt]{cslreport}
 
 \usepackage{alltt,times,url,cite}
 \usepackage{amsfonts,latexsym,amssymb}
@@ -19,7 +19,7 @@
 \newcommand{\rational}{\ensuremath{\mathbb{Q}}}
 
 \title{{\bf Where Art Thou Heap Metadata?}\\[5mm]
-\Large  Darpa Contract Number N66001-15-C-4061\\[5mm] 
+\Large  DARPA Contract Number N66001-15-C-4061\\[5mm] 
 Final Report}
 
 \author{Ian A. Mason (PI), Drew Dean, Bruno Dutertre,\\
@@ -43,7 +43,7 @@ Final Report}
 \chapter{Introduction}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This document summarizes the research performed under Darpa Contract
+This document summarizes the research performed under DARPA Contract
 Number N66001-15-C-4061 by SRI International, and presents the
 project's results. The project started in August 2015 and was
 completed in August 2017. The Principal Investigator for this project
@@ -211,7 +211,7 @@ properties using the SAL model checker.
 
 The following paper describes improvements to the SeaHorn static
 analyzer that were developed as part of this project, in an attempt to
-prove the absence of null pointer derefences in openBSD's malloc:
+prove the absence of null pointer dereferences in openBSD's malloc:
 \begin{quote}
   Arie Gurfinkel and Jorge A. Navas, A Context-Sensitive Memory Model
   for Verification of C/C++ Programs, {\em Static Analysis Symposium
@@ -392,8 +392,8 @@ implementation is then not entirely lock free. However, the locks are
 used only in limited contexts during the migration process and
 initialization of some data structures. In normal usage, operations
 such as adding or removing entries, and searching for a key do not
-require any locks. Appendix~\ref{algorithm-details} presents the
-hash-table design and algorithms in detail.
+require any locks. The appendix (Section~\ref{algorithm-details})
+presents the hash-table design and algorithms in detail.
 
 To get confidence in this hash-table implementation, we performed
 extensive stress testing. We also applied formal verification to key
@@ -405,22 +405,22 @@ parts of the migration process.
 \label{verification}
 
 In year two of the project, we investigated several formal-method
-tools and applied them to existing malloc implementations and to our
+tools and applied them to an existing malloc implementation and to our
 own code, including our new dynamic hash table.
 
-\subsubsection{Static Analysis of Malloc}
+\subsection{Static Analysis of Malloc}
 
 We have applied static analysis tools to a simplified version of
 OpenBSD's memory allocation library. This library implements a
 so-called BIBOP (Big Bag of Pages) allocation algorithm. This
 allocator was implemented by Otto Moerbeek and was described at the
 EuroBSD Conference in 2009~\cite{Moerbeek2009}. This allocator is an
-interersting target for analysis since it is relatively simple and the
+interesting target for analysis since it is relatively simple and the
 code is small, but the allocator achieves good performance.
 
 In a first attempt, we applied the SeaHorn static
 analyzer~\cite{Gurfinkel+etal:SeaHorn:2015} to this code, without any
-modification. SeaHorn is an open-source verification tool for safey
+modification. SeaHorn is an open-source verification tool for safety
 properties of programs. It works at the level of LLVM bitcode so it
 can be easily applied to software written in C or C++. SeaHorn can
 check safety properties such as the absence of null-pointer
@@ -432,7 +432,7 @@ It turned out that some of the algorithmic tricks used by OpenBSD were
 beyond what can be modeled in SeaHorn, because the backend solver used
 by SeaHorn works on problem formulated in linear arithmetic. The
 OpenBDS code uses various bit-level encoding that do not translate to
-linear arithemtic. As a result, analysis with SeaHorn does not work
+linear arithmetic. As a result, analysis with SeaHorn does not work
 well on the original code. The modeling to too imprecise and SeaHorn
 produces to too many false positives.
 
@@ -466,15 +466,160 @@ FramaC~\cite{Kirchner+etal:FramaC:2015}). We did not have the resource
 for such an exercise within the project.
 
 
-\subsubsection{Modeling and Verification of Lock-Free Algorithms}
+\subsection{Modeling and Verification of Lock-Free Algorithms}
+
+As an alternative to static analysis of code, we looked at
+verification of higher-level, more abstract models of algorithms and
+data structures. We focused on building state-machine models of some
+of the lock-free algorithms we use and verifying invariant properties
+using model checkers. We relied on the SAL and Sally model checkers.
+
+SAL is a set of tools for specification and analysis of state
+machines~\cite{deMoura+etal:SAL:2004}, developed and distributed by
+SRI International. SAL includes traditional model-checking tools,
+including a BDD-based symbolic model checker and bounded model
+checkers for both finite and infinite systems. The state-machine
+models we developed were all infinite and we analyzed them using pure
+bounded model checking (to search for counterexamples to properties of
+interest) and so-called $k$-induction. $K$-induction is a
+generalization of the standard induction principle that can be used to
+prove invariant properties of state-transition systems.  In most
+cases, $k$-induction is not fully automated and requires the user to
+discover useful auxiliary lemmas that can be proved by $k$-induction
+and imply the property one cares about.
+
+Our main results are based on a state-machine model of the data
+migration algorithm used in our lock-free hash table. We proved a key
+invariant of this algorithm using SAL. The proof involves a set of
+auxiliary lemmas the we discovered and added by hand. Details of the
+model and verification results are presented in the appendix.
+
+We also experimented with SRI's new model checker called
+Sally~\cite{Jovanovic+Dutertre:pdkind:2016}.  Sally is a more advanced
+tool than SAL. It extends traditional $k$-induction with algorithms
+that attempt to automatically discover an inductive strengthening of
+the property of interest. Sally builds on the IC3 method due to
+Bradley~\cite{bradley2011sat} and relies on SMT solvers to
+incrementally discover relevant auxiliary lemmas. 
+
+We attempted to verify the hash-table migration process using Sally,
+starting with the same state-machine model we built for
+SAL. Unfortunately, Sally does not manage to prove the key invariant
+on its own. It learns larger and larger sets of auxiliary invariants
+but it does not converge. This is a limitation of the underlying SMT
+technology used by Sally. We believe that one of the auxiliary lemma
+that we used in our manual proof with SAL is beyond what can be
+learned automatically by Sally. In summary, the proof is too hard for
+Sally to discover automatically. In future work, we will consider
+alternative techniques for learning auxiliary invariants based on
+abstract interpretation or other methods, which we believe might help
+in this case.
+
+Although Sally did not work on the most complex model we developed in
+this project, we used it successfully to verify a simple
+implementation of the CAS instruction, a non-blocking queue, and
+Simpson's four-slot algorithm, a classical example of lock-free
+algorithm for asynchronous communication~\cite{Simpson:four-slot:1990}.
+
+
+
+\chapter{Conclusion}
+
+We  have produced  several prototypes allocators, most of which were
+derived from the glibc family tree, depicted in Figure~\ref{fig:tree}.
+We also implemented Maged Michael's lock-free allocator, and a variety
+of lock-free data structures.
+This work culminates with an alpha version of a variant of  glibc's malloc for
+x86-64  Linux  called  \texttt{sri-glibc}.
+This  allocator  does  not
+include any metadata in client memory.  It is {\em thread safe\/}, and
+introduces no new  contention compared to the  glibc original. Ongoing
+benchmarking indicates that the overhead  is often very much less than
+10\%.   One  of  the  key  ingredients  to  \texttt{sri-glibc}  is  an
+efficient lock-free mechanism that maps  client addresses to the arena
+the memory belongs to.
+
+
+%% In phase two of this project, we plan to improve the alpha version by 
+%% completing the benchmarking, and refining the implementation details.
+%% We also plan to open source all the software that we have developed in this
+%% project. We will also broaden our approach from
+%% just implementation to more formal methods.
+
+
+%% As is well known, it is much easier to verify code designed for verification than to
+%% verify existing code.
+%% This is particularly true of the family of memory allocators rooted with Doug Lea's \texttt{dlmalloc}.
+%% There is simply too much
+%% complication in \texttt{dlmalloc} (e.g., the constantly
+%% changing representations of a block depending on its current state)
+%% for any realistic hope of formally verifying significant properties of
+%% \texttt{dlmalloc}-family allocators in a small project.
+
+%% As we wrap up
+%% our work on removing heap metadata from the heap itself, we consider
+%% what the next steps in securing the heap should be. The logical follow
+%% on is to study the design space, investigating the formalization of
+%% the relevant memory allocation algorithms and lock-free data
+%% structures in order to analyze their properties and establish their
+%% correctness in the context of a performant, realistic dynamic memory
+%% allocator. While the full formal verification of a realistic, performant
+%% dynamic memory allocator is beyond the scope of the proposed work,
+%% this work will specify and implement an allocator amenable to
+%% formal verification in future work.
+
+
+%% We have three key desiderata:
+%% \begin{enumerate}
+%%   \item No metadata in front of client chunk,
+%%     i.e. headerless chunks;
+%%   \item  Progress in a memory allocation operation
+%%     should not depend on a obtaining globally contended lock; 
+%%   \item Amenable to verification/formal specification, or designed with
+%%     that in mind. 
+%% \end{enumerate}
+%% No current memory allocator for C/C++ meets all
+%% of these desiderata.
+
+%% We plan to begin by experimenting with a prototype BIBOP
+%% allocator, and conduct application level benchmarks (e.g., SPEC CPU 2006, Yices,
+%% Cryptominisat, and a good multi-threaded application) to measure application
+%% performance and memory use. With our experience as both users and
+%% developers of formal verification tools (e.g., PVS, Yices, Sally) we
+%% will also evaluate how tractable specification and verification of
+%% different algorithms appear to be.  We will also use this time to fill
+%% in any gaps that might remain in our understanding about the usability
+%% of various lock-free data structures and algorithms from Phase 1. We
+%% then proceed to the primary task of specifying and implementing our
+%% chosen allocator design.
 
 
 
 
+{\small
+\bibliographystyle{plain} 
+\bibliography{heap,malloc}
+}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Implementation Details}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\appendix
+
+%%%============================================
+\chapter{Survey of Malloc Implementations}
+%%%============================================
+
+%% \subsection{Apple}
+
+\input{apple}
+
+%% \subsection{Windows}
+\input{windows}
+
+
+%%%============================================
+\chapter{Malloc With Separate Metadata}
+\label{malloc-details}
+%%%============================================
 
 %% Do we want to split this up into prototype 1 2 and 3?
 
@@ -770,98 +915,16 @@ Benchmark  & Base  (s)  & Run time (s) &  Base Ratio & \% Overhead (\%)\\
 
 
 
-\chapter{Conclusion}
-
-We  have produced  several prototypes allocators, most of which were
-derived from the glibc family tree, depicted in Figure~\ref{fig:tree}.
-We also implemented Maged Michael's lock-free allocator, and a variety
-of lock-free data structures.
-This work culminates with an alpha version of a variant of  glibc's malloc for
-x86-64  Linux  called  \texttt{sri-glibc}.
-This  allocator  does  not
-include any metadata in client memory.  It is {\em thread safe\/}, and
-introduces no new  contention compared to the  glibc original. Ongoing
-benchmarking indicates that the overhead  is often very much less than
-10\%.   One  of  the  key  ingredients  to  \texttt{sri-glibc}  is  an
-efficient lock-free mechanism that maps  client addresses to the arena
-the memory belongs to.
-
-
-%% In phase two of this project, we plan to improve the alpha version by 
-%% completing the benchmarking, and refining the implementation details.
-%% We also plan to open source all the software that we have developed in this
-%% project. We will also broaden our approach from
-%% just implementation to more formal methods.
-
-
-%% As is well known, it is much easier to verify code designed for verification than to
-%% verify existing code.
-%% This is particularly true of the family of memory allocators rooted with Doug Lea's \texttt{dlmalloc}.
-%% There is simply too much
-%% complication in \texttt{dlmalloc} (e.g., the constantly
-%% changing representations of a block depending on its current state)
-%% for any realistic hope of formally verifying significant properties of
-%% \texttt{dlmalloc}-family allocators in a small project.
-
-%% As we wrap up
-%% our work on removing heap metadata from the heap itself, we consider
-%% what the next steps in securing the heap should be. The logical follow
-%% on is to study the design space, investigating the formalization of
-%% the relevant memory allocation algorithms and lock-free data
-%% structures in order to analyze their properties and establish their
-%% correctness in the context of a performant, realistic dynamic memory
-%% allocator. While the full formal verification of a realistic, performant
-%% dynamic memory allocator is beyond the scope of the proposed work,
-%% this work will specify and implement an allocator amenable to
-%% formal verification in future work.
-
-
-%% We have three key desiderata:
-%% \begin{enumerate}
-%%   \item No metadata in front of client chunk,
-%%     i.e. headerless chunks;
-%%   \item  Progress in a memory allocation operation
-%%     should not depend on a obtaining globally contended lock; 
-%%   \item Amenable to verification/formal specification, or designed with
-%%     that in mind. 
-%% \end{enumerate}
-%% No current memory allocator for C/C++ meets all
-%% of these desiderata.
-
-%% We plan to begin by experimenting with a prototype BIBOP
-%% allocator, and conduct application level benchmarks (e.g., SPEC CPU 2006, Yices,
-%% Cryptominisat, and a good multi-threaded application) to measure application
-%% performance and memory use. With our experience as both users and
-%% developers of formal verification tools (e.g., PVS, Yices, Sally) we
-%% will also evaluate how tractable specification and verification of
-%% different algorithms appear to be.  We will also use this time to fill
-%% in any gaps that might remain in our understanding about the usability
-%% of various lock-free data structures and algorithms from Phase 1. We
-%% then proceed to the primary task of specifying and implementing our
-%% chosen allocator design.
-
-
-
-
-{\small
-\bibliographystyle{plain} 
-\bibliography{heap,malloc}
-}
-
-
-\appendix
-
 %%%============================================
-\chapter{Survey of Malloc Implementations}
+\chapter{Mostly Lock-Free Hashtable}
+\label{algorithm-details}
 %%%============================================
 
-%% \subsection{Apple}
 
-\input{apple}
-
-%% \subsection{Windows}
-\input{windows}
-
+%%%================================================
+\chapter{Modeling and Verification of Concurrent Migration}
+\label{verif}
+%%%================================================
 
 %% %%%============================================
 %% \chapter{Migration Path}
