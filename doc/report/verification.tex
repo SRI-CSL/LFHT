@@ -2,9 +2,9 @@
 \label{sec:veri}
 
 We have modeled a simplified version of the \texttt{add} operation of
-the hash table. \todo{list limitations of the model (e.g., counters
-  updates are considered atomic, no handle)}. Figure~\ref{fig:model}
-shows the configuration diagram for the \texttt{add} operation.
+the hash table and proved some facts about the growing and data
+migration mechanism. Figure~\ref{fig:model} shows the configuration
+diagram for the \texttt{add} operation.
 
 \newcommand{\pczero}{\mbox{init}}
 \newcommand{\pcone}{\mbox{ready\hspace{-0.5mm}-to\hspace{-0.5mm}-add}}
@@ -36,22 +36,31 @@ shows the configuration diagram for the \texttt{add} operation.
 
 \subsection{Abstract Model for \texttt{add}}
 
-A variable \emph{state} records one of the four possible states shown
-in the configuration diagram in Figure~\ref{fig:model}: \emph{\pczero},
-\emph{\pcone}, \emph{\pctwo}, and \emph{\pcthree}.
+The \texttt{add} operation has been modeled as a state machine by
+specifying a transition relation on a set of state variables. This
+transition relation is stated as guarded commands, where the guard
+triggers a particular transition. We first describe the state
+variables and then its transitions.
 
-A variable $ht$ represents the hash table in our abstract model.  A
-hash table is modeled by a list or sequence of size $N$ of
+\subsubsection{State Variables}
+
+A variable \emph{state} records one of the four possible states shown
+in the configuration diagram in Figure~\ref{fig:model}:
+\emph{\pczero}, \emph{\pcone}, \emph{\pctwo}, and \emph{\pcthree}.
+%
+A variable \emph{ht} represents the hash table in our abstract model.
+A hash table is modeled by a list or sequence of size $N$ of
 \texttt{header} elements. The type \texttt{header} is a record of
-\texttt{num\_entries}, \texttt{num\_to\_migrate}, and
-\texttt{assimilated} where \texttt{num\_entries} is a non-negative
-integer that keeps track of the number of entries in the array,
-\texttt{num\_to\_migrate} is another non-negative integer that
-represents the number of entries that needs to be migrated to the new
-array, and \texttt{assimilated} is a boolean that indicates whether
-the array has been assimilated or not. Note that our abstract model
-ignores the contents of the hash table since they are irrelevant to
-the properties we are interested as we shall show later.
+\emph{num\_entries}, \emph{num\_to\_migrate}, and \emph{assimilated}
+where \emph{num\_entries} is a non-negative integer that keeps track
+of the number of entries in the array, \emph{num\_to\_migrate} is
+another non-negative integer that represents the number of entries
+that needs to be migrated to the new array, and \emph{assimilated} is
+a boolean that indicates whether the array has been assimilated or
+not. Note that our abstract model ignores the contents of the hash
+table since they are irrelevant to the properties we are interested as
+we shall show later. \todo{list limitations of the model (e.g.,
+  counters updates are considered atomic, no handle)}
 
 \todo{note that $ht$ is in the reverse order (newest is the last)}
 
@@ -70,7 +79,7 @@ respectively.
 
 \todo{Describe N and MAX (threshold)}
 
-\subsection{Abstract Operations}
+\subsubsection{Transitions}
 
 \noindent \textbf{Init:} \vspace{1mm}
 
@@ -161,7 +170,7 @@ respectively.
   \> $state := \pcthree$}
 \end{minipage}
 
-\noindent \textbf{Loop Forever:} \vspace{1mm}
+\noindent \textbf{Sink state:} \vspace{1mm}
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
@@ -169,110 +178,230 @@ respectively.
 }
 \end{minipage}
 
+We assume that there is an arbitrary (but bounded) number of threads
+calling the \texttt{add} operation in an asynchronous manner. For
+convenience, we will refer to $state[i]$ as the value of the state
+variable for thread $i$.
 
-\subsection{Property}
-
+\subsection{Proving Correctness of a Key Invariant about the Migration Mechanism}
 
 We are interested in proving a key invariant in the implementation of
-our hash table. This invariants refers to the fact that migration is
-always from the old table to the new one. Informally, for all index $i
-\in \{1, \ldots, N\}$ such that $i < old$ then the array $i$ must be
-assimilated. This can be stated more formally as follows:
+our hash table. This invariant reflects that migration is always from
+the old table to the new one regardless of the number of
+copies. Informally, for all indexes $i \in \{1, \ldots, N\}$ such that
+$i < old$ then the array $i$ must be assimilated. This can be stated
+more formally as follows:
 
-  \[G(\forall 1 \leq i \leq N.~ i < old \Rightarrow ht_{i}.assimilated) \]
-  
-While proving this property, we will assume that there is a bounded
-number of $n$ threads that can call \texttt{add} in an asynchronous
-manner.
+  \[ G(\forall 1 \leq i \leq N.~ i < old \Rightarrow ht_{i}.assimilated) \]
 
-\subsection{Proving Property with Sal}
+Current verification technology can only hope for proving whether a
+property is \emph{inductive invariant}. Informally, given a state
+machine defined by $Init(x)$, a formula over a set of state variables
+$x$ that represents the set of initial states, and $Tr(x,x')$, the
+transition relation defining the new values $x'$ from the old values
+$x$, we say that a property $Inv(x)$ is inductive invariant if:
 
-Sal\cite{sal2} is a ....
+\begin{enumerate}
+\item $Init(x) \Rightarrow Inv(x)$
+\item $Inv(x) \wedge Tr(x,x') \Rightarrow Inv(x')$
+\end{enumerate}
 
-The overall process was based on strengthening the property (which is
-not inductive invariant) by adding new lemas obtained by inspecting a
-failed proof for inductiveness.
+Unfortunately, the key invariant we wish to prove is not inductive
+invariant. A common solution to this problem is to find a
+\emph{strengthening} of the property we want to prove, $Inv'(x)$, such
+that the resulting formula becomes inductive. That is,
 
-\begin{lemma}
+\begin{enumerate}
+\item $Init(x) \Rightarrow (Inv(x) \wedge Inv'(x))$
+\item $(Inv(x) \wedge Inv'(x)) \wedge Tr(x,x') \Rightarrow (Inv(x') \wedge Inv'(x'))$
+\end{enumerate}
+
+Another effective technique, complementary to this strenghtening
+process, is $k$-induction~\cite{MouraRS03}, a generalization of
+induction\footnote{Induction is $k$-induction for $k=1$.}. We say a
+property $Inv(x)$ is $k$-inductive if:
+
+\begin{enumerate}
+\item $Init(x) \Rightarrow Inv(x)$
+\item $Inv(x) \wedge Tr(x,x') \wedge \ldots \wedge Inv(x^{k-1}) \wedge Tr(x^{k-1},x^{k}) \Rightarrow Inv(x^{k})$
+\end{enumerate}
+
+
+We used Sally~\cite{sally} a state-of-the-art model checker developed
+by SRI that combines k-induction with IC3~\cite{Bradley11}, a powerful
+technique to generate inductive invariants. A very appealing feature
+of Sally is its ability to discover fully automatically non-trivial
+inductive invariants about state machines that can be used to
+strengthen the desired property.
+%
+Thus, we encoded the state machine from the previous section together
+with the key invariant we want to prove into Sally format and ran
+Sally on it. Unfortunately, Sally was not able to find an inductive
+strengthening in a reasonable amount of time.
+
+Since, it is not likely that current verification technology can prove
+our key invariant in a fully automatic manner we decided to help the
+verification process by manually adding auxiliary lemmas that can make
+our property inductive.
+%
+For this, we used Sal 2~\cite{sal2}, a verification framework
+developed also by SRI. Sal 2 provides an infinite model checking
+algorithm based only on k-induction which is less powerful than
+Sally. However, Sal 2 allows to write lemmas in a very expressive
+language which makes it more amenable for this semi-automatic
+process. The overall process was based on strengthening the property
+by adding new lemas obtained by inspecting a failed proof for
+inductiveness. We were able to prove semi-automatically that our key
+invariant holds up to 6 threads. For that, we needed to come up with
+30 lemmas described as follows.
+
+\begin{lemma} %lemma1
   $G((new = 1 \wedge old = 1) \vee (new = old+1))$
 \end{lemma}
 
-\begin{lemma}
-  $G(\forall 1 \leq i \leq N.  \wedge i > new \Rightarrow empty(ht_i))$
+\begin{lemma} %lemma2
+  $G(\forall 1 \leq i \leq N.  \wedge i > new \Rightarrow \mathsf{empty}(ht_i))$
 
-  \noindent where
-
-  \begin{equation*}
-    empty(ht_i)=\left\{
-    \begin{array}{ll}
-      ht_i.num\_entries = 0  & \wedge \\
-      ht_i.num\_to\_migrate = 0 & \wedge \\
-      \negate{ht_i.assimilated} & 
-    \end{array}
-    \right.
-  \end{equation*}
+  \noindent where $\mathsf{empty}(ht_i)= ht_i.num\_entries = 0 \wedge
+  ht_i.num\_to\_migrate = 0 \wedge \negate{ht_i.assimilated}$
   
 \end{lemma}  
 
-\begin{lemma}
- $G(\forall 1 \leq i \leq N.  \wedge \negate{full(i, ht_i)} \wedge size(i,ht_i) \Rightarrow \\
-       \forall i < j \leq N.  \Rightarrow empty(ht_j))$
+\begin{lemma} %lemma2b
+ $G(\forall 1 \leq i \leq N.  \wedge \negate{\mathsf{full}(i, ht_i)}
+  \wedge \mathsf{size}(i,ht_i) \Rightarrow \forall i < j \leq N.
+  \Rightarrow \mathsf{empty}(ht_j))$
 \end{lemma}  
 
-\noindent where
+\noindent where $\mathsf{full}(i, ht_i)= \ldots$, and \\
+$\mathsf{size}(i, ht_i)=\ldots$
 
-  \begin{equation*}
-    full(i, ht_i)=\left\{
-    \begin{array}{ll}
-       & \\
-    \end{array}
-    \right.
-  \end{equation*}
-
-  \begin{equation*}
-    size(i, ht_i)=\left\{
-    \begin{array}{ll}
-       & \\
-    \end{array}
-    \right.
-  \end{equation*}
-  
-
-\begin{lemma}
+\begin{lemma} %lemma3
   $G(\forall 1 \leq i \leq N. ht_i.num\_to\_migrate \leq ht_i.num\_entries)$
 \end{lemma}  
 
-\begin{lemma}
+\begin{lemma} %lemma4
   $G(size(new,K))$
 \end{lemma}  
 
-\begin{lemma}
+\begin{lemma} %lemma5a
   $G(\negate{ht_{new}.assimilated})$
 \end{lemma}  
 
-\begin{lemma}
+\begin{lemma} %lemma5b
   $G(ht_{new}.num\_to\_migrate = 0)$
 \end{lemma}  
 
-\begin{lemma}
+\begin{lemma} %lemma5c 
   $G(old = new \vee full(old, ht_{old}.num\_entries))$
 \end{lemma}  
 
-\begin{lemma}
+\begin{lemma} %lemma5e
   $G(\forall 1 \leq i \leq N. \negate{full(i,ht_{i})} \Rightarrow \negate{ht_{i}.assimilated})$
 \end{lemma}  
 
-\begin{lemma}
+\begin{lemma} %lemma5f
   $G(\forall 1 \leq i \leq N. \negate{full(i,ht_{i})} \Rightarrow \negate{ht_{i}.num\_to\_migrate = 0})$
 \end{lemma}  
 
-\begin{lemma}
+\begin{lemma} %lemma5g
   $G(\forall 1 \leq i \leq N. ht_{i}.assimilated \Rightarrow ht_{i}.num\_to\_migrate = 0)$
 \end{lemma}  
 
-\begin{lemma}
+\begin{lemma} %lemma6
+  \begin{equation*}
+    \begin{array}{l}
+    G(\forall 1 \leq i \leq N. i \leq old \wedge old < new \Rightarrow  \\
+    \quad (\mathsf{full}(i, ht_{i}) \Rightarrow ht_{i}.num\_to\_migrate = 0 \Longleftrightarrow ht_{i}.assimilated) \wedge \\
+    \quad (\negate{\mathsf{full}(i, ht_{i})} \Rightarrow \negate{(ht_{i}.num\_to\_migrate = 0 \wedge ht_{i}.assimilated)}))
+    \end{array}
+  \end{equation*}
+\end{lemma}  
+
+\begin{lemma} % lemma8b
+  \begin{equation*}
+    \begin{array}{l}
+      G( old \neq new \wedge \mathsf{migrated}(ht,old) = 0 \wedge ht_{new}.num\_entries = 0 \Rightarrow \\
+      \exists 1 \leq i \leq NUM\_THREADS. state[i] = \pczero)
+    \end{array}
+  \end{equation*}
+
+  where $\mathsf{migrated} = \ldots$
+\end{lemma}
+
+\begin{lemma} %pending_pos
   $G()$
 \end{lemma}  
+
+\begin{lemma} %pending_upper
+  $G()$
+\end{lemma}  
+
+\begin{lemma} %did_not_pay_1
+  $G()$
+\end{lemma}  
+
+\begin{lemma} %paid_tax_0
+  $G()$
+\end{lemma}  
+
+\begin{lemma} %paid_tax_1
+  $G()$
+\end{lemma}
+
+\begin{lemma} %revenue_0
+  $G()$
+\end{lemma}
+
+\begin{lemma} %revenue_1
+  $G()$
+\end{lemma}
+
+\begin{lemma} %revenue_2
+  $G()$
+\end{lemma}
+
+\begin{lemma} %revenue_3
+  $G()$
+\end{lemma}
+
+\begin{lemma} %revenue_4
+  $G()$
+\end{lemma}
+
+\begin{lemma} %revenue_5
+  $G()$
+\end{lemma}
+
+\begin{lemma} %posted_0
+  $G()$
+\end{lemma}
+
+\begin{lemma} %posted_1
+  $G()$
+\end{lemma}
+
+\begin{lemma} %upper
+  $G()$
+\end{lemma}
+
+\begin{lemma} %upper_strengthening_3
+  $G()$
+\end{lemma}
+
+\begin{lemma} %upper_strengthening_3a
+  $G()$
+\end{lemma}
+
+\begin{lemma} %upper_strengthening_5
+  $G()$
+\end{lemma}
+
+
+\paragraph{Experiments.}
+
+\todo{add experiments: for each lemma value of $k$ and time. We show
+  up to 6 threads}
 
 %% \begin{tabular}{|l|l|}
 %%   \hline
@@ -280,11 +409,5 @@ failed proof for inductiveness.
 %%   \hline \\
 
 %% \end{tabular}
-
-\subsection{Proving Property with Sally}
-
-Sally~\cite{sally} is a ...
-
-TODO: not sure if we can say something meaningful.
 
 
