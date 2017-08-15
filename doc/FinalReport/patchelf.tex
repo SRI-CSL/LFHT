@@ -1,0 +1,135 @@
+%% \subsection{Patching our glibc into a standard Linux distribution}
+
+While it is desirable to add our improved \texttt{malloc} implementation
+to a Linux distribution's glibc, this will not happen all at
+once. Some applications will slow down. Others might have mysterious
+crashes, perhaps due to their own bugs being sensitive to the behavior
+of \texttt{malloc}, or perhaps due to subtle bugs in \texttt{sri-glibc}.
+This suggests that systems administrators need a
+methodology for rolling out our modified glibc under two
+different circumstances: {\em default opt-in with exceptions} and {\em
+default opt-out with exceptions}. In other words, we need a mechanism
+that can select the new glibc as the system-default, or not, and
+then we need a mechanism to identify specific applications and say
+that these specific applications should get something other than the
+system-default, whatever that might be.
+
+%% \subsection{Changing the system default}
+
+It is certainly possible to replace the shared object file
+for \texttt{glibc}, but this does not allow for exceptions. It is
+necessary to allow the original glibc and our improved glibc to be
+installed side-by-side, with a way to instruct Linux to, by default,
+prefer the new glibc over the original.
+
+%% \subsubsection{Relevant environment variables}
+
+The following Linux environment variables impact how shared libraries are loaded:
+
+\begin{description}
+
+\item[LD\_PRELOAD]
+Specifies one or more shared libraries, separated by spaces or colons,
+to be loaded by a process. These are loaded in advance of anything
+specified by the program itself. If SRI's glibc were listed in
+\texttt{LD\_PRELOAD}, then it would be loaded instead of the system's
+glibc.
+
+\item[LD\_LIBRARY\_PATH]
+Specifies a directory to be used in addition to, and in advance of,
+any of the existing places that Linux looks for shared libraries. If
+SRI's glibc were stored in its own directory and that directory
+were in \texttt{LD\_LIBRARY\_PATH}, then it would be loaded instead of
+the system's glibc.
+
+\item[/etc/ld.so.preload]
+This file is roughly equivalent to \texttt{LD\_PRELOAD}, specifying
+shared libraries to be loaded by a process in advance.
+
+\item[/etc/ld.so.conf]
+This file specifies the standard locations from which shared libraries
+are found. It's only consulted after all the preceding features have
+failed to find the library. It typically includes a directive to
+``include'' a series of other files in \texttt{/etc/ld.so.conf.d}, each
+of which specifies one or more directories in which to find shared
+libraries.
+
+\end{description}
+
+Setuid programs operate in ``secure mode,'' which changes their
+behavior with respect to the environment variables above. In
+particular, \texttt{LD\_PRELOAD} and \texttt{LD\_LIBRARY\_PATH} are ignored
+when running a setuid program. (Otherwise, a user could compile
+arbitrary code into a replacement for glibc, run any setuid
+program, and thus arrange for it to run the user-supplied code as
+root.) The file \texttt{/etc/ld.so.preload}, however, is always used,
+even for setuid programs. This makes it or \texttt{/etc/ld.so.conf} the
+preferable solution for doing a system-wide change for a system
+default.\footnote{There are also some variables that the linker looks
+for inside these paths, some of which are still available in secure
+mode. This formed the basis for a root exploit discovered by Tavis
+Ormandy in
+2010. \url{http://seclists.org/fulldisclosure/2010/Oct/257}}
+
+
+%% \subsubsection{Relevant ELF headers}
+
+Modern Linux executable files are structured according to the ELF
+(``Executable and Linkable Format'') standard. A full discussion of
+the ELF standard is beyond the scope of this document, but it is
+important to note that an ELF binary has fields that tell the linker
+which shared libraries it wants. Those fields are:
+
+\begin{description}
+
+\item[DT\_RPATH]
+A list of directories to look for a library. This list is consulted
+{\em before} \texttt{LD\_LIBRARY\_PATH}. This header is considered
+``deprecated'' but it still works.
+\item[DT\_RUNPATH]
+A list of directories to look for a library. This list is consulted
+{\em after} \texttt{LD\_LIBRARY\_PATH}. If the \texttt{runpath} is set, then
+the \texttt{rpath} is ignored.
+
+\item[DT\_NEEDED]
+A list of the shared libraries used by this application. These are
+commonly named {\em without} fully qualified paths, and then resolved
+with the various search paths specified above. A library specified in
+the \texttt{needed} variable may also have a fully qualified path, and
+will thus be resolved to that path.
+
+\end{description}
+
+To make an exception to the system-wide policy, as specified in the
+\texttt{LD\_} environment variables or \texttt{/etc/ld.so.*} disk files, the
+obvious place to start is to edit a given program's \texttt{rpath} or
+\texttt{runpath} variables, allowing that program to specify its own
+directories in which to find shared libraries. Alternately, the \texttt{needed}
+variable can be edited to point specifically to the SRI glibc.
+
+We surveyed a variety of different tools and techniques for
+manipulating the \texttt{rpath}, \texttt{runpath}, and \texttt{needed}
+variables in an ELF binary. The best solution seems to be
+PatchELF\footnote{\url{https://nixos.org/patchelf.html}}. Notably, it
+has flags like \texttt{--add-needed}, \texttt{--replace-needed} which
+provide a safe way to manipulate existing binaries. By specifying the
+SRI glibc as an absolute path with the \texttt{--replace-needed}
+flag, the original glibc can be replaced with the new one.
+
+The \texttt{readelf} tool is part of most standard Linux
+distributions. It's useful for looking at an existing binary to see
+what it's doing. For example, running \texttt{readelf -d} will print the
+``dynamic'' section, which includes all the \texttt{needed} variables,
+thus listing all the shared libraries that will be requested when this
+program is loaded. (Those libraries might have their own downstream
+dependencies. These aren't shown.) This is useful, when looking at an
+existing binary, to verify whether it's been patched beforehand with
+\texttt{patchelf}.
+
+The \texttt{ldd} tool is part of most standard Linux distributions. You
+simply run \texttt{ldd} with the name of a binary and it lists each
+shared library that will be requested as well as the disk file to
+which it will be mapped. This process will recursively follow the
+dependencies from each library as well. This is also useful, when
+looking at an existing binary, to verify whether it's been patched
+properly with \texttt{patchelf}.

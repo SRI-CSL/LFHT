@@ -1,0 +1,160 @@
+\section{Apple (OS X and iOS)}
+Security researchers have paid attention to
+Apple operating systems,~\cite{reverse}
+but its memory allocator has received less attention.
+Some discussion appears in Miller and
+Zovi~\cite{mac-hackers-handbook-2009,ios-hackers-handbook-2012}
+in 2009 and 2012.  The earliest public discussion seems to be from
+Nemo~\cite{nemo2005} in 2005.
+
+As of 2016, Apple uses two different \texttt{malloc} implementations:
+\texttt{libmalloc} and \texttt{bmalloc}. \texttt{libmalloc} appears to date
+from Apple's acquisition of NeXT, while \texttt{bmalloc} is a brand new
+system, used in Apple's Safari browser. Both are distributed as open
+source on Apple's web site\cite{libmalloc, bmalloc}. \texttt{bmalloc} is also distributed
+as part of Apple's open source Webkit~\cite{webkit} (i.e., the open
+source project from which Apple's Safari browser is derived).
+
+
+\subsection{LibMalloc}
+\label{sec:libmalloc}
+
+\texttt{libmalloc} is implemented in C and exports a superset of the
+usual \texttt{malloc} routines. Notably, it has a concept of {\em zones},
+allowing a program to allocate fresh memory from any zone. Under the
+hood, these zones are essentially the same as the {\em arenas} used in
+the glibc memory allocators. With Apple
+explicitly exposing these zones, a multi-threaded program can
+explicitly manage multiple zones to avoid locking contention when
+memory is allocated.
+
+Zones also support {\em batch allocation}, facilitating
+efficient  allocation of large numbers of objects of the same size.
+Apple's developer pages promote these and other \texttt{libmalloc}-specific
+features.\footnote{\url{https://developer.apple.com/library/mac/documentation/Performance/Conceptual/ManagingMemory/Articles/MemoryAlloc.html}}
+Apple
+also supports zone-specific allocation in its Cocoa Objective-C
+libraries\footnote{\url{https://developer.apple.com/library/ios/documentation/General/Conceptual/CocoaEncyclopedia/ObjectAllocation/ObjectAllocation.html}}
+and apparently zone allocation is also used inside the newer Swift
+programming
+environment.\footnote{\url{http://www.russbishop.net/swift-how-did-i-do-horrible-things}}
+
+The downside of \texttt{libmalloc}'s approach, however, is that
+alternative \texttt{malloc} implementations do not implement the various
+zone-related methods and are not drop-in compatible with programs or
+libraries that expect to have the extended \texttt{libmalloc} features.
+
+\texttt{libmalloc} gives explicit credit to the Hoard allocator as an
+influence on its design. This analysis focuses on management of the ``tiny''
+regions, used for small object sizes.
+
+Tiny objects are allocated from {\em regions}.
+Each region is 1MB in
+size and holds 64520 16-byte {\em blocks}.
+A region also has a {\em region trailer} which contains the
+metadata for the region.
+The trailer includes a bitmask to track the free/busy
+state of each tiny block. When a block is allocated, it has no
+per-block header or trailer. Free blocks are maintained using a
+doubly-linked list.
+
+Apple's design, in the presence of a use-after-free situation,
+potentially allows attackers to have access to the free-list
+pointers. Furthermore, if an attacker can overflow the last block in a
+region, the attacker will then have access to that region's metadata.
+
+%% \begin{figure}
+%% % \lstset{language="pascal",showstringspaces=false,basicstyle=\ttfamily}
+%% % \begin{lstlisting}[frame=single]
+%% \begin{description}
+%% \item[MallocLogFile $<f>$] to create/append messages to file $<f>$ instead of stderr
+%% \item[MallocGuardEdges] to add 2 guard pages for each large block
+%% \item[MallocDoNotProtectPrelude] to disable protection (when previous flag set)
+%% \item[MallocDoNotProtectPostlude] to disable protection (when previous flag set)
+%% \item[MallocStackLogging] to record all stacks.  Tools like leaks can then be applied
+%% \item[MallocStackLoggingNoCompact] to record all stacks.  Needed for
+%%   {\sf malloc\_history}
+%% \item[MallocStackLoggingDirectory] to set location of stack logs,
+%%   which can grow large; default is {\sf /tmp}
+%% \item[MallocScribble] to detect writing on free blocks and missing initializers: 0x55 is written upon free and 0xaa is written on allocation
+%% \item[MallocCheckHeapStart $<n>$] to start checking the heap after $<n>$ operations
+%% \item[MallocCheckHeapEach $<s>$] to repeat the checking of the heap after $<s>$ operations
+%% \item[MallocCheckHeapSleep $<t>$] to sleep $<t>$ seconds on heap corruption
+%% \item[MallocCheckHeapAbort $<b>$] to abort on heap corruption if $<b>$ is non-zero
+%% \item[MallocCorruptionAbort] to abort on malloc errors, but not on out of memory for 32-bit processes. MallocCorruptionAbort is always set on 64-bit processes
+%% \item[MallocErrorAbort] to abort on any malloc error, including out of memory
+%% % \end{lstlisting}
+%% \end{description}
+%% \caption{Environment variables supported by {\sf libmalloc}.\label{fig:libmalloc-env}}
+%% \end{figure}
+
+\texttt{libmalloc} maintains a checksum in its heap metadata, added
+sometime between 2009 and 2012, that defeats some heap metadata
+overwrite attacks. A checksum is stored in the high four bits of
+each free-list pointer, based on a randomly-generated
+cookie~\cite{ios-hackers-handbook-2012}.
+
+\texttt{libmalloc} also has a variety of flags that radically change how it
+operates, along with a related {\em Guard Malloc}
+library\footnote{\url{https://developer.apple.com/library/ios/documentation/Performance/Conceptual/ManagingMemory/Articles/MallocDebug.html}}. These help developers in
+finding memory errors in their programs. They have a serious
+impact upon performance. They could potentially be
+repurposed for security if their performance could be
+improved.
+%% Figure~\ref{fig:libmalloc-env}
+%% provides a list of the environment variables that control the security
+%% checking.
+Of note, \texttt{MallocGuardEdges} adds guard pages around large blocks, which will
+cause memory overruns to abort. Also, several
+environment variables instruct \texttt{libmalloc} to perform consistency
+checks on its heap. If corruption is detected, the process will abort.
+
+\subsection{BMalloc}
+Before 2015, the Webkit browser used Google's \texttt{tcmalloc}, then
+Apple abruptly replaced it with \texttt{bmalloc}. 
+
+The \texttt{bmalloc} implementation does not
+presently have the standard \texttt{malloc} API. Instead, a family of
+similarly-named calls (``mbmalloc'', ``mbcalloc'', ``mbfree'', etc.)
+are provided, along with an internal switch that can route these calls
+to the ``real'' \texttt{malloc} implementation or handle them
+internally. A program linked against \texttt{bmalloc} can then
+be switched over to a third-party \texttt{malloc} implementation.
+\texttt{bmalloc} does not expose anything
+analogous to the ``zone'' features of \texttt{libmalloc}.
+
+\texttt{bmalloc} has a unique design. It could be best described as ``lazy'', in that
+when a block is freed, a pointer to it is placed in a fixed-size
+buffer. In the common case, allocation and free operations are
+constant time, with a very low cost.
+
+\texttt{bmalloc} supports multiple {\em heaps}. A heap has {\em small
+  pages} which in turn have {\em small lines}.
+\texttt{bmalloc} tracks the free space within these small  lines.
+Then, for each of a
+variety of {\em size classes}, \texttt{bmalloc} maintains ``bump
+allocators'' which are backed by those small lines. Objects are
+allocated starting at the beginning of a line and continuing
+sequentially to the end. 
+
+Each heap has an asynchronous ``scavenger'' which processes its free lists,
+looking for memory it can reuse. If the scavenger gets behind, the
+normal allocation and memory freeing routines can also do the same
+work.
+
+Unlike \texttt{libmalloc}, memory objects in \texttt{bmalloc} never hold
+metadata when they're freed. Instead of an inline free list, there is a
+counter in the header for each line of memory to track how much is in
+use versus how much is free. If the counter indicates a line of memory is
+entirely unused, it can be recycled for future allocations.
+
+The metadata resides in headers at the front of each heap. The
+asynchronous nature of the free-list scavenger makes it harder for an attacker
+to predict the state of the heap at any given time, which is otherwise
+essential to Heap Feng Shui attacks.
+
+\texttt{bmalloc} has no explicit features to detect 
+use-after-free or double-free operations which might be exploited
+as part of an attack, but it has clearly been engineered to make
+some attacks more difficult.
+
