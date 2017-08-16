@@ -226,8 +226,10 @@ to be held in New York City from August 30th to September 1st, 2017.
 We have developed several prototypes of malloc and lock-free hash
 tables during the project. Our re-implementation of GNU Libc's malloc
 that separates metadata from the head is publicly available under an
-open-source license at~\url{https://github.com/SRI-CSL/sri-glibc-malloc}.
-
+open-source license
+at~\url{https://github.com/SRI-CSL/sri-glibc-malloc}.  We are planning
+to publish our latest lock-free hash table using a similar model
+at~\url{https://github.com/SRI-CSL/LFHT}, pending open-source approval.
 
 
 
@@ -426,7 +428,7 @@ can be easily applied to software written in C or C++. SeaHorn can
 check safety properties such as the absence of null-pointer
 dereferences and buffer overflows. It can also verify user-provided
 properties written as C-like assertions. Our initial goal was to show
-that the OpenBSD malloc did not have null-pointer derefences.
+that the OpenBSD malloc did not have null-pointer dereferences.
 
 It turned out that some of the algorithmic tricks used by OpenBSD were
 beyond what can be modeled in SeaHorn, because the backend solver used
@@ -525,19 +527,65 @@ algorithm for asynchronous communication~\cite{Simpson:four-slot:1990}.
 
 \chapter{Conclusion}
 
-We  have produced  several prototypes allocators, most of which were
+Separating metadata from the heap improves software reliability by
+making heap-based attacks more difficult. One way to achieve this
+separation is to modify an existing memory-allocation library such as
+glibc. We have delivered such a modified glibc in the first year of
+this project. One problem with this approach is dealing with the
+inherent complexity of the glibc code, which our new allocator only
+adds to. An alternative is to start from a blank slate or form a clean
+code base such as the allocators of OpenBSD and FreeBSD, which may be
+a better solution and makes the code less difficult to formally analyze.
+
+We have produced several prototypes allocators, most of which were
 derived from the glibc family tree, depicted in Figure~\ref{fig:tree}.
 We also implemented Maged Michael's lock-free allocator, and a variety
-of lock-free data structures.
-This work culminates with an alpha version of a variant of  glibc's malloc for
-x86-64  Linux  called  \texttt{sri-glibc}.
-This  allocator  does  not
-include any metadata in client memory.  It is {\em thread safe\/}, and
-introduces no new  contention compared to the  glibc original. Ongoing
-benchmarking indicates that the overhead  is often very much less than
-10\%.   One  of  the  key  ingredients  to  \texttt{sri-glibc}  is  an
-efficient lock-free mechanism that maps  client addresses to the arena
-the memory belongs to.
+of lock-free data structures.  This work culminates with an alpha
+version of a variant of glibc's malloc for x86-64 Linux called
+\texttt{sri-glibc}.  This allocator does not include any metadata in
+client memory.  It is {\em thread safe\/}, and introduces no new
+contention compared to the glibc original. Ongoing benchmarking
+indicates that the overhead is often very much less than 10\%.
+
+One of the key ingredients in all such allocators is an efficient
+mechanism for locating the metadata for a memory chunk given a pointer
+to this chunk. We have developed and implemented several versions of
+hash tables to satisfy this requirement. A key goal is to ensure
+minimum contention when accessing the hash table in multi-threaded
+applications. We started with completely lock-free implementations but
+these had disadvantages in terms of memory usage. In year two of the
+project, we designed and implemented a more-efficient version that is
+not completely lock-free but can release unreachable memory to the
+operating system. Although locks are used in some critical sections,
+most access to the table are lock free and introduce little contention
+between threads. Fully lock-free hash table that can grow and release
+unused memory is a hard research problem and we did not find any paper
+or implementation that convincingly solve these issues.
+
+We have investigated formal verification of memory-allocation
+algorithms and lock-free hash tables. We found that the algorithms and
+data structures used in malloc (even relatively simple versions of
+malloc) are too complex for out-of-the-box verification with
+state-of-the-art static analysis tools. Partial results based on
+bounded exploration are more practical, but we speculate that full
+verification at the source-code level requires hand-written
+annotations. The main issue is that malloc algorithms maintain global,
+complex data structures. Verification requires discovering non-trivial
+invariants about these data structures that are implicit in the
+code. The current generation of static-analysis tools does not have
+enough reasoning power to automatically learn such complex invariants.
+
+We explored formal analysis using at a more abstract level than source
+code, by building state-machine models of algorithms. Formal
+verification is more tractable at this level, but still requires
+significant effort.  We have successfully verified an important
+property of our hash-table implementation with model-checking tools.
+This provides some evidence of correctness even though the models are
+highly simplified. For example, the number of threads is fixed and
+small. We did not have time to explore manual verification with tools
+such as theorem provers which would be a natural extension of this
+work and potentially lead to more general correctness results.
+
 
 
 %% In phase two of this project, we plan to improve the alpha version by 
@@ -598,7 +646,7 @@ the memory belongs to.
 
 {\small
 \bibliographystyle{plain} 
-\bibliography{heap,malloc}
+\bibliography{heap,malloc,refs}
 }
 
 
@@ -919,6 +967,39 @@ Benchmark  & Base  (s)  & Run time (s) &  Base Ratio & \% Overhead (\%)\\
 \chapter{Mostly Lock-Free Hashtable}
 \label{algorithm-details}
 %%%============================================
+
+Our interest in lock-free hash tables arose naturally from the needs
+of a metadataless version of the glibc memory allocator.  The glibc
+allocator attempts to minimize contention in multithreaded
+applications by maintaining a pool of independent heaps called \emph{arenas}.
+
+In a call to free, when chunks are preceeded by metadata, one can use
+simple offset calculations, and pointer-chasing tricks to go from a
+chunk to its arena. When metadata is separated from the chunk,
+this is no longer possible, and as a result we use lock-free hash
+tables in order to determine the arena associated with an arbitrary
+chunk.
+
+Implementing a fixed size lock-free linear probing hash table is a
+relatively simple task. Many examples can be found online. An
+important aspect that is often not addressed is to allow the table to
+grow as more entries are added. This is key to ensure efficiency and
+low hash-collision rates. Growing the table leads to maintaining
+several verisons of the table: when the table grows, one must create a
+new larger, initially empty table and transfer the content from the
+current table to the new table. This creates a new difficulty: when
+and how can we reclaim the memory used by the old copy, in a lock-free
+fashion?
+
+The algorithm we present here solves both problems,
+it is inspired by a paper by Tobias Maier~\cite{MaierSD16}
+but is different in several important aspects. The most noticable difference
+is that we do not mark the keys before they are copied, but rather require the
+threads to copy before marking. This is not as efficient, but does not have
+a race condition that we could not eliminate.
+
+
+\input{../report/algorithm}
 
 
 %%%================================================
