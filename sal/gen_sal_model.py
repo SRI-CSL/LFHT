@@ -305,14 +305,9 @@ upper_strengthening_1 :  LEMMA
 upper_strengthening_2 :  LEMMA
        system |- G( (old < new AND ht[old].num_to_migrate >= T => ht[new].num_entries = T * paid_tax + posted));
 
-% PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper_strengthening_3
-upper_strengthening_3 :  LEMMA
-       system |- G( (old < new => ht[new].num_entries <= T * paid_tax + posted));
-
 % PROVED 
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper_strengthening_4 
-upper_strengthening_4 :  LEMMA
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper_strengthening_3 
+upper_strengthening_3 :  LEMMA
        system |- G( (old < new => ht[new].num_entries = Migrated(ht, old) + posted));
 
 % PROVED
@@ -322,7 +317,7 @@ out_of_mem : LEMMA
 %%% END strengthening used for upper lemmas %%%%
 
 % PROVED 
-% sal-inf-bmc -i -ice -v 1 -d {1} -s yices2 {0} upper_global -l pending_lb -l pending -l old_and_new -l empty_beyond_new -l empty_beyond_non_full -l num_to_migrate_and_num_entries -l table_sizes   -l new_cannot_migrate -l old_is_full -l not_full_cannot_be_assimilated -l assimilated_nothing_to_migrate -l one_thread_at_init_state_after_migration -l upper_strengthening_1 -l upper_strengthening_2 -l upper_strengthening_3 -l paid_tax_0 -l paid_tax_1 -l posted_0 -l posted_1 -l did_not_pay_ub  -l upper_strengthening_4  -l out_of_mem -l revenue_2 -l revenue_3 -l revenue_4 
+% sal-inf-bmc -i -ice -v 1 -d {1} -s yices2 {0} upper_global -l pending_lb -l pending -l old_and_new -l empty_beyond_new -l empty_beyond_non_full -l num_to_migrate_and_num_entries -l table_sizes   -l new_cannot_migrate -l old_is_full -l not_full_cannot_be_assimilated -l assimilated_nothing_to_migrate -l one_thread_at_init_state_after_migration -l upper_strengthening_1 -l upper_strengthening_2 -l paid_tax_0 -l paid_tax_1 -l posted_0 -l posted_1 -l did_not_pay_ub  -l upper_strengthening_3  -l out_of_mem -l revenue_2 -l revenue_3 -l revenue_4 
 upper_global :  LEMMA
       system |- G( (FORALL (i: table_index): i < N => ht[i].num_entries <= (THRESHOLD * table_size(i)) + NUM_THREADS));
 		   
