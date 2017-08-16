@@ -84,15 +84,13 @@ to be migrated to the new table, and \emph{assimilated} is a boolean
 that indicates whether the table copy has been assimilated or
 not. Note that our abstract model ignores the contents of the actual
 hash table since they are irrelevant to the properties we are
-interested. \todo{list limitations of the model (e.g., counters
-  updates are considered atomic, no handle)}. For convenience, the
-table headers in our abstract model are in the reverse order, compared
-to the actual implementation.  Our abstract model keeps track of the
-array slots that represent the new table and its previous
-version. This information is stored in the indexes \texttt{new} and
-\texttt{old}, respectively. The variable \texttt{cur\_sz} represents
-the size of the new table. The value of \texttt{cur\_sz} is doubled
-each time the hash table needs to grow.
+interested. For convenience, the table headers in our abstract model
+are in the reverse order, compared to the actual implementation.  Our
+abstract model keeps track of the array slots that represent the new
+table and its previous version. This information is stored in the
+indexes \texttt{new} and \texttt{old}, respectively. The variable
+\texttt{cur\_sz} represents the size of the new table. The value of
+\texttt{cur\_sz} is doubled each time the hash table needs to grow.
 
 To make our proofs simpler and more efficient, our abstract model also
 keeps track of several counters to monitor thread's activities:
@@ -226,6 +224,23 @@ range $[1,\ldots,N]$.
 \end{minipage}
 
 \end{itemize}
+
+\subsubsection{Limitations of the Abstract Model}
+
+To make trackable verification our abstract model differs from the
+actual implementations in several ways:
+
+\begin{itemize}
+\item Number of threads is bounded.
+\item Number of table copies is bounded.
+\item All counters and Boolean flags are updated atomically.  
+\end{itemize}
+
+The assumption of having a bounded number of threads and table copies
+is imposed by SAL, our verification engine. However, we could have
+removed the assumption of having atomic counters by modeling CAS
+operations and the handle. Although we have modeled CAS operations in
+SAL we did not have time to model the handle.
 
 
 \subsection{Proving Correctness of a Key Invariant about the Migration Mechanism}
