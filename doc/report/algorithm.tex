@@ -401,14 +401,31 @@ bool _grow_table(lfht_t *ht,  lfht_hdr_t *hdr){
 \end{clisting}
 \end{center}
 
+The routine \texttt{\_migrate\_table} attempts to move \texttt{MIGRATIONS\_PER\_ACCESS} key-value
+pairs from the old table header to the new table header. The routine is careful to be sensitive to
+the possibility that the table state may change.
+The workhorse of this process
+is the subroutine  \texttt{assimilate} which returns the number of key-value pairs actually moved.
+If this number is less than the requested amount, we can safely assume that the table has been
+fully migrated. In this case we atomically update the \texttt{assimilated} field of the old table header,
+and then, while holding the lock, update the state of the stable from \texttt{EXPANDING} to
+\texttt{EXPANDED}.\footnote{Race condition: not requiring that the thread updating the
+  table state holds the lock, introduces a nasty race condition, where the thread being a bit slow
+  actually toggles the state from \texttt{EXPANDING} to \texttt{EXPANDED} for a migration that
+  has just commenced, not the previous one that just finished.}
+As mentioned earlier, when moving key-value pairs from the old table header to the new table header, we
+commence the emigration at the hash of the key of the API operation that triggered the call to \texttt{\_migrate\_table}.
+
+
+
+
 %migrate_table
 \begin{center}
 \begin{clisting}
 static int32_t _migrate_table(lfht_handle_t *h, uint64_t key, uint32_t hash){
   int table_state;
   lfht_t *ht;
-  lfht_hdr_t *hdr;
-  lfht_hdr_t *ohdr;
+  lfht_hdr_t *hdr, *ohdr;
   uint32_t moved;
   bool finished, assimilated;
   int32_t migrated = -1;
@@ -443,17 +460,25 @@ static int32_t _migrate_table(lfht_handle_t *h, uint64_t key, uint32_t hash){
 \end{clisting}
 \end{center}
 
+The \texttt{assimilate} routine starts out at the slot corresponding to the \texttt{hash} and attempts to
+move the \texttt{key} and its associated value to the new table if it is present, and is not tombstoned. Along the way it also tries to
+move \texttt{count - 1} many other non-assimilated non-tombstoned key-value pairs. The actual move is done by the routine \texttt{\_lfht\_move},
+which we will describe shortly.  For each key that we successfully move, we subsequently mark as assimilated, and increment the counter.
+As a result many threads may try and
+move the same key-value pair, but we prefer this to the flawed situation where we first mark the key as assimilated, then
+move.  The problem with marking the key as assimilated, moving, then updating the counters, is that the last thread to do this (before the
+table is assimilated) can go to sleep before the increment, and never get to increment the counter before the new table fills up.
+
+
 %assimilate
 \begin{center}
 \begin{clisting}
 static uint32_t assimilate(lfht_handle_t *h, lfht_hdr_t *from_hdr, uint64_t key, uint32_t hash,  uint32_t count){
   uint32_t retval, mask, j, i;
-  lfht_entry_t current;
+  lfht_entry_t current, *table;
   uint64_t akey;
-  lfht_entry_t*  table;
-  bool success;
   /* success indicates that the key is either not in the table or has been assimilated */
-  success = false;
+  bool success = false  
   retval = 0;
   mask = from_hdr->max - 1;
   table = from_hdr->table;
