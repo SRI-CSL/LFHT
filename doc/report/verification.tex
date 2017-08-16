@@ -90,7 +90,7 @@ implementation. That is, the newest copy is the last element of the
 list.  Our abstract model needs to distinguish between the new array
 and the old one. This information is stored in the indexes
 \texttt{old} and \texttt{new}, respectively. The variable
-\texttt{cur\_sz} represents the size of the new table. The value of
+\texttt{cur\_sz} represents the size of the new array. The value of
 \texttt{cur\_sz} is doubled each time the hash table needs to grow.
 
 To make our proofs simpler, our abstract model also keeps track of
@@ -100,7 +100,7 @@ several counters to monitorize thread's activities\jorge{rename these
 \begin{itemize}
 \item \texttt{pending}: number of threads at state \pcone.
 \item \texttt{did\_not\_pay}: number of threads that added an entry
-  without migrating entries from the old to the new table.
+  without migrating entries from the old to the new array.
 \item \texttt{paid\_tax}: number of threads that migrated entries.
 \item \texttt{posted}: number of threads that added entries.
 \item \texttt{revenue}: number of migrated entries.  
@@ -333,7 +333,7 @@ the lemma.
   and thread related
   (Lemmas~\ref{one_thread_at_init_state_after_migration},\ref{pending},\ref{pending_lb},\ref{did_not_pay_ub},\ref{paid_tax0},\ref{paid_tax1},\ref{revenue1},\ref{revenue2},\ref{revenue3},\ref{posted0},\ref{posted1},\ref{out_of_mem}). Still need to categorize ~\ref{upper_strengthening1},\ref{upper_strengthening2},\ref{upper_strengthening3},\ref{upper},etc}
 
-\begin{lemma}[Order of old and new arrays]
+\begin{lemma}[Order between old and new array]
   \begin{equation*}
     \begin{array}{l}      
       (new = 1 \wedge old = 1) \vee (new = old+1)
@@ -351,7 +351,7 @@ the lemma.
 \label{empty_beyond_new}  
 \end{lemma}  
 
-\begin{lemma}[If an array is not full then the arrays after that  must be empty]
+\begin{lemma}[If an array is not exceed the occupancy threaholds then all arrays after it  must be empty]
   \begin{equation*}
 \begin{array}{l}        
   \forall 1 \leq i \leq N.  \negate{\mathsf{full}(i,
@@ -363,7 +363,7 @@ the lemma.
 \label{empty_beyond_non_full}
 \end{lemma}
 
-\begin{lemma}[Number of migrations cannot exceed the number of entries in an array]
+\begin{lemma}[Number of migrations cannot exceed the number of entries]
   \begin{equation*}
 \begin{array}{l}        
   \forall 1 \leq i \leq N. \HT{i}.num\_to\_migrate \leq \HT{i}.num\_entries
@@ -372,7 +372,7 @@ the lemma.
 \label{num_to_migrate_and_num_entries}
 \end{lemma}  
 
-\begin{lemma}[Sizes of each array]
+\begin{lemma}[Size of each array]
   \begin{equation*}
 \begin{array}{l}        
   \mathsf{size}(new) = cur\_sz
@@ -381,7 +381,7 @@ the lemma.
 \label{table_sizes}
 \end{lemma}  
 
-\begin{lemma}[New array cannot be assimilated]
+\begin{lemma}[The new array cannot be assimilated]
   \begin{equation*}
 \begin{array}{l}        
   \negate{\HT{new}.assimilated}
@@ -390,7 +390,7 @@ the lemma.
 \label{new_cannot_be_assimilated}
 \end{lemma}  
 
-\begin{lemma}[New array cannot migrate entries]
+\begin{lemma}[The new array cannot have any entry to migrate]
   \begin{equation*}
 \begin{array}{l}      
   \HT{new}.num\_to\_migrate = 0
@@ -399,7 +399,7 @@ the lemma.
 \label{new_cannot_migrate}
 \end{lemma}  
 
-\begin{lemma}[Old array always exceeds the occupancy threshold]
+\begin{lemma}[The old array, if different from new, always exceeds the occupancy threshold]
   \begin{equation*}
 \begin{array}{l}        
   old \neq new \Rightarrow \mathsf{is\_full}(old, \HT{old}.num\_entries)
@@ -417,7 +417,7 @@ the lemma.
   \label{not_full_cannot_be_assimilated}  
 \end{lemma}  
 
-\begin{lemma}[If an array is assimilated no more migrations are possible]
+\begin{lemma}[If an array is assimilated then there is no more entries to migrate]
   \begin{equation*}
 \begin{array}{l}        
   \forall 1 \leq i \leq N. \HT{i}.assimilated \Rightarrow \HT{i}.num\_to\_migrate = 0
@@ -437,7 +437,7 @@ the lemma.
   \label{num_to_migrate_and_assimilated_in_old_tables}  
 \end{lemma}  
 
-\begin{lemma}[At least one thread at the initial state after migration]
+\begin{lemma}[At least one thread must be at the initial state after migration finished]
   \begin{equation*}
     \begin{array}{l}
       old \neq new \wedge (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate) = 0 \wedge \HT{new}.num\_entries = 0 \Rightarrow \\
@@ -448,7 +448,7 @@ the lemma.
 \end{lemma}
 
 
-\begin{lemma}[Value of pending]
+\begin{lemma}[Exact bound for pending]
   \begin{equation*}
 \begin{array}{l}        
   pending = (\mathsf{if}~state[1]~=\pcone~ \mathsf{then}~1~\mathsf{else}~0) + \ldots + \\
@@ -477,7 +477,7 @@ the lemma.
   \label{did_not_pay_ub}    
 \end{lemma}  
 
-\begin{lemma}[Value for paid\_tax before having copies]
+\begin{lemma}[Exact bound for paid\_tax before having copies]
   \begin{equation*}
 \begin{array}{l}        
   old = new \Rightarrow paid\_tax = 0
@@ -496,7 +496,7 @@ the lemma.
 \end{lemma}
 
 
-\begin{lemma}[Value of revenue]
+\begin{lemma}[Exact bound for revenue if table grew]
   \begin{equation*}
 \begin{array}{l}        
   old < new \Rightarrow revenue = \HT{old}.num\_entries - \HT{old}.num\_to\_migrate
@@ -505,8 +505,8 @@ the lemma.
   \label{revenue1}    
 \end{lemma}
 
-\begin{lemma}
-  \begin{equation*}[Upper bound for revenue]
+\begin{lemma}[Upper bound for revenue if table grew]
+  \begin{equation*}
 \begin{array}{l}        
   old < new \Rightarrow revenue \leq \HT{old}.num\_entries
 \end{array}
@@ -514,7 +514,7 @@ the lemma.
   \label{revenue2}    
 \end{lemma}
 
-\begin{lemma}[Relationship between revenue and paid\_tax]
+\begin{lemma}[Relationship between number to migrate in the old array, revenue and paid\_tax]
     \begin{equation*}
 \begin{array}{l}      
   old < new \wedge \HT{old}.num\_to\_migrate > 0 \Rightarrow revenue = T \times paid\_tax
@@ -532,7 +532,7 @@ the lemma.
     \label{posted0}  
 \end{lemma}
 
-\begin{lemma}[Relationship between posted, pending, paid\_tax and did\_not\_pay]
+\begin{lemma}[Relationship between assimilated in the old array, posted, pending, paid\_tax and did\_not\_pay]
   \begin{equation*}
     \begin{array}{l}      
       old < new \wedge \HT{old}.assimilated \Rightarrow posted+ pending = paid\_tax + did\_not\_pay
@@ -541,7 +541,7 @@ the lemma.
   \label{posted1}
 \end{lemma}
 
-\begin{lemma}
+\begin{lemma}[Relationship between number of entries in the new array, paid\_tax, and posted]
   \begin{equation*}
     \begin{array}{l}      
       old < new \Rightarrow \HT{new}.num\_entries \leq T \times paid\_tax + posted
@@ -550,7 +550,7 @@ the lemma.
   \label{upper_strengthening1}
 \end{lemma}
 
-\begin{lemma}
+\begin{lemma}[Relationship between number of entries in the new array, number to migrate in the old,  paid\_tax, posted]
 \begin{equation*}
 \begin{array}{l}  
   old < new \wedge \HT{old}.num\_to\_migrate \geq t \Rightarrow \\
@@ -589,7 +589,7 @@ the lemma.
   \label{upper_global}
 \end{lemma}
 
-\begin{lemma}[Upper bound of the number of entries for all old arrays]
+\begin{lemma}[Upper bound of the number of entries for old arrays]
   \begin{equation*}
 \begin{array}{l}    
   old < new \wedge \negate{\HT{old}.assimilated} \Rightarrow \\
@@ -620,7 +620,7 @@ the lemma.
       \ref{revenue2} & $\{$\ref{revenue1}$\}$ \\
       \ref{upper_global} & $\{$\ref{old_and_new},\ref{empty_beyond_new},\ref{empty_beyond_non_full},\ref{num_to_migrate_and_num_entries},\ref{table_sizes},\ref{new_cannot_migrate},\ref{old_is_full},\ref{not_full_cannot_be_assimilated},\ref{assimilated_nothing_to_migrate},\ref{one_thread_at_init_state_after_migration},\ref{pending},\ref{pending_lb},\ref{did_not_pay_ub},\ref{paid_tax0},\ref{paid_tax1},\ref{revenue1},\ref{revenue2},\ref{revenue3},\ref{posted0},\ref{posted1},\ref{upper_strengthening1},\ref{upper_strengthening2},\ref{upper_strengthening3},\ref{out_of_mem}$\}$ \\
       
-     \ref{upper} & $\{$\ref{old_is_full},\ref{num_to_migrate_and_assimilated_in_old_tables},\ref{pending_lb},\ref{did_not_pay_ub},\ref{revenue2},\ref{revenue3},\ref{posted1},\ref{upper_strengthening1}$\}$  \\
+     \ref{upper} & $\{$\ref{old_is_full},\ref{num_to_migrate_and_assimilated_in_old_tables},\ref{pending_lb},\ref{did_not_pay_ub},\ref{revenue1},\ref{revenue2},\ref{revenue3},\ref{posted1},\ref{upper_strengthening1}$\}$  \\
       \hline 
     \end{tabular}
     \caption{The lemma on the left is proven assuming the lemmas on
@@ -676,14 +676,13 @@ The first column denoted by \textsf{\# Threads} is the number of
 threads, the second column denoted by $\mathsf{K}$ is the induction
 depth for the $k$-induction engine, and the third column
 (\textsf{Time}) is the accumulated verification times for all lemmas
-and the key invariant in seconds.
+and the key invariant in seconds. All the experiments assumed that the
+maximum number of allocated arrays is three. If this limit is exceeded
+the state machine moves to \pcthree\ state.
 %
 We were able to prove that our invariant holds up to seven
 threads. All lemmas were proven using $K=1$, except
 Lemma~\ref{upper_global} which needed up to depth $15$ for seven
 threads.
 
-\jorge{The numbers in Figure~\ref{sal-results} is with 3 tables. If we
-  increase the number of tables then we need to increase the parameter
-  $K$.}
 
