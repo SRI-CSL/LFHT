@@ -647,7 +647,10 @@ the lemma.
       \ref{revenue2} & $\{$\ref{revenue1}$\}$ \\
       \ref{upper_global} & $\{$\ref{old_and_new},\ref{empty_beyond_new},\ref{empty_beyond_non_full},\ref{num_to_migrate_and_num_entries},\ref{table_sizes},\ref{new_cannot_migrate},\ref{old_is_full},\ref{not_full_cannot_be_assimilated},\ref{assimilated_nothing_to_migrate},\ref{one_thread_at_init_state_after_migration},\ref{pending},\ref{pending_lb},\ref{did_not_pay_ub},\ref{paid_tax0},\ref{paid_tax1},\ref{revenue1},\ref{revenue2},\ref{revenue3},\ref{posted0},\ref{posted1},\ref{upper_strengthening1},\ref{upper_strengthening2},\ref{upper_strengthening3},\ref{out_of_mem}$\}$ \\
       
-     \ref{upper} & $\{$\ref{old_is_full},\ref{num_to_migrate_and_assimilated_in_old_tables},\ref{pending_lb},\ref{did_not_pay_ub},\ref{revenue1},\ref{revenue2},\ref{revenue3},\ref{posted1},\ref{upper_strengthening1}$\}$  \\
+      \ref{upper} & $\{$\ref{old_is_full},\ref{num_to_migrate_and_assimilated_in_old_tables},\ref{pending_lb},\ref{did_not_pay_ub},\ref{revenue1},\ref{revenue2},\ref{revenue3},\ref{posted1},\ref{upper_strengthening1}$\}$  \\
+      \hline
+      \hline
+      \textsf{Invariant} & $\{$\ref{table_sizes},\ref{pending},\ref{did_not_pay_ub},\ref{revenue2},\ref{revenue3},\ref{posted0},\ref{posted1},\ref{upper_strengthening1},\ref{out_of_mem},\ref{upper_global},\ref{upper} $\}$ \\
       \hline 
     \end{tabular}
     \caption{Lemma dependencies: the lemma on the left is proved
@@ -659,7 +662,7 @@ the lemma.
 
 
 
-\paragraph{Experiments.} To prove the lemmas and the key invariant we used the SAL
+\paragraph{Experiments.} To prove lemmas \ref{old_and_new}-\ref{upper} and the key invariant we used the SAL
 k-induction engine. Some lemmas were validated without further
 strengthening but some lemmas required the help of other lemmas,
 previously proved. Table~\ref{table:dependencies} shows the
