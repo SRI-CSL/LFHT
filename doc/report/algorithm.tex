@@ -1,25 +1,29 @@
-\section{Algorithm}
-\label{sec:algo}
+%% \subsection{Algorithm}
+%% \label{sec:algo}
 
-We develop a hash table that maps integral keys to integral
-values. The implementation supports insertion of new $(key,value)$
-pairs, updates of the value assigned to an existing key, removal of a
-key, and search. Updates and insertions are implemented by a single
-{\em add\/} operation. These operations can be performed concurrently
-by multiple threads. In the typical case, none of these operations
-require obtaining a lock.
+\subsection{Overview}
 
-The underlying hash table algorithm we use is linear probing. The
-hash-table content is stored in a shared array. Each entry in that
-array is a pair that consists of 64-bit integers or pointers. Updates
+Our hash table maps integral keys to integral values. The
+implementation supports insertion of new $(key,value)$ pairs, updates
+of the value assigned to an existing key, removal of a key, and
+search. Updates and insertions are implemented by a single {\em add\/}
+operation. These operations can be performed concurrently by multiple
+threads. In the typical case, none of these operations require
+obtaining a lock.
+
+We use linear probing. The hash-table content is stored in a shared
+array. Search for a key start at some index $i$ derived from the key's
+hash value then proceeds incrementally from $i$.  Each entry in the
+array is a pair consists of two 64-bit integers or pointers. Updates
 to this array are performed atomically using compare-and-swap (CAS)
 operations. Our algorithm attempts to keep the array less than 70\%
 full (this can be configured at compile time). When this threshold is
 exceeded, we allocate a fresh array of double the current capacity and
 migrate entries from the current array into this fresh array. Removal
-of key-value pairs is done by using a special value called a 
-{\em tombstone\/}, rather than removing the actual key-value pair.
-Entries with keys with tombstoned values are not migrated during the expansion process.
+of key-value pairs is done by using a special value called a {\em
+  tombstone\/}, rather than removing the actual key-value pair.
+Entries with keys with tombstoned values are not migrated during the
+expansion process.
 
 In the rest of this section we give an overview of our approach, the
 data structures involved, and a tour of a representative sample of the

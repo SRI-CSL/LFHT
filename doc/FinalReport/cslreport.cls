@@ -34,7 +34,7 @@
 
 % Define the srilogo macro
 \def\srilogo{\includegraphics[height=18mm]{srilogo}}
-\def\srititle{\includegraphics[width=7in]{SRIInternational}}
+\def\srititle{\includegraphics[width=7in]{SRI-cover-image}}
 
 % Font used for small font at the bottom of the titlepage
 \font\sri@SRI=cmssbx10 scaled\magstep3%
