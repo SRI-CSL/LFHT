@@ -267,29 +267,38 @@ property $Inv(x)$ is $k$-inductive if:
 \end{itemize}
 
 
-We used Sally~\cite{sally} a state-of-the-art model checker developed
-by SRI that combines k-induction with IC3~\cite{Bradley11}, another
-powerful technique to generate inductive invariants. A very appealing
-feature of Sally is its ability to discover fully automatically
-non-trivial inductive invariants about state machines that can be used
-to strengthen the desired property.
-%
-Thus, we encoded the state variables and transitions from previous
-section together with the key invariant we want to prove into Sally
-format and ran Sally on it. It turned out that Sally was not able to
-find an inductive strengthening in a reasonable amount of time.
+We used the SAL language~\cite{bensalem2000overview,sal2} to encode
+the state machine and the key invariant. For the verification engine,
+we used Sally~\cite{sally}, a state-of-the-art model checker that
+combines k-induction with IC3~\cite{Bradley11}, another powerful
+technique to generate inductive invariants.  For that, we translated
+the SAL model to the internal format understood by Sally.  It turned
+out that Sally was not able to find an inductive strengthening in a
+reasonable amount of time.
+
+%% We used Sally~\cite{sally} a state-of-the-art model checker developed
+%% by SRI that combines k-induction with IC3~\cite{Bradley11}, another
+%% powerful technique to generate inductive invariants. A very appealing
+%% feature of Sally is its ability to discover fully automatically
+%% non-trivial inductive invariants about state machines that can be used
+%% to strengthen the desired property.
+%% %
+%% Thus, we encoded the state variables and transitions from previous
+%% section together with the key invariant we want to prove into Sally
+%% format and ran Sally on it.
 
 Since, it is not likely that current verification technology can prove
 our key invariant in a fully automatic manner we decided to help the
 verification process by manually adding auxiliary lemmas that can make
 our property inductive.
 %
-For this, we used SAL~\cite{sal2}, a verification framework
-developed also by SRI. SAL provides an infinite model checking
-algorithm based on k-induction which is less powerful than
-Sally. However, SAL allows to write lemmas in a very expressive
-language which makes it more amenable for this semi-automatic
-process. Prior to presenting all lemmas needed to prove our key
+%% For this, we used SAL~\cite{sal2}, a verification framework
+%% developed also by SRI. SAL provides an infinite model checking
+%% algorithm based on k-induction which is less powerful than
+%% Sally. However, SAL allows to write lemmas in a very expressive
+%% language which makes it more amenable for this semi-automatic
+%% process.
+Prior to presenting all lemmas needed to prove our key
 invariant, we define some helper functions:
 
 \begin{minipage}{\linewidth}
@@ -632,8 +641,7 @@ the lemma.
 
 
 
-\paragraph{Experiments.} We have encoded all lemmas and the key invariant in
-the Sal language~\cite{bensalem2000overview} and used the SAL
+\paragraph{Experiments.} To prove the lemmas and the key invariant we used the SAL
 k-induction engine. Some lemmas were proven without further
 strengthening but some lemmas required the help of other
 lemmas. Table~\ref{table:dependencies} shows the dependencies between
