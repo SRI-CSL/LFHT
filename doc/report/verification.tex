@@ -110,7 +110,7 @@ keeps track of several counters to monitor thread's activities:
   the new table.
   
 \item \texttt{freebie\_count}: number of threads that were in state
-  \pcone when a new table was allocated. These threads will add
+  \pcone\ when a new table was allocated. These threads will add
   entries into the new table without copying from the old to the new
   table.
 
@@ -118,13 +118,13 @@ keeps track of several counters to monitor thread's activities:
 
 \subsubsection{Transitions}
 
-In this section, we show in detail all the transitions of our abstract
+In this section, we show all the transitions of our abstract
 model. Our model makes use of several constant parameters: $N$ is the
-number of table headers, $T$ is the occupancy threshold, $M$ is the number of
-entries that each threshold needs to migrate before adding a new
-entry, and $P$ is the number of threads. For convenience, we assume a
-type \texttt{table\_index} which denotes all natural numbers in the
-range $[1,\ldots,N]$.
+number of table headers, $T$ is the capacity threshold, $M$ is the
+number of entries that each threshold needs to migrate before adding a
+new entry, and $P$ is the number of threads. For convenience, we
+assume a type \texttt{table\_index} which denotes all natural numbers
+in the range $[1,\ldots,N]$.
 
 %% N is num of arrays
 %% T is the threshold
@@ -227,8 +227,8 @@ range $[1,\ldots,N]$.
 
 \subsubsection{Limitations of the Abstract Model}
 
-To make trackable verification our abstract model differs from the
-actual implementations in several ways:
+For reasons of tractability our abstract model differs from the actual
+implementation in several ways:
 
 \begin{itemize}
 \item Number of threads is bounded.
@@ -249,10 +249,10 @@ We are interested in proving a key invariant in the implementation of
 our hash table. This invariant reflects that migration is always from
 the old table to the new one regardless of the number of
 copies. Informally, for all indexes $i \in \{1, \ldots, N\}$ such that
-$i < old$ then the table header $i$ must be assimilated. This can be stated
+if $i < old$, then the table header $i$ must be assimilated. This can be stated
 more formally as follows:
 
-  \[ \forall 1 \leq i \leq N.~ i < old \Rightarrow \HT{i}.assimilated \]
+  \[ \mathsf{MInv}: \forall 1 \leq i \leq N.~ i < old \Rightarrow \HT{i}.assimilated \]
 
 We assume that there is an arbitrary (but bounded) number of threads,
 denoted by $P$, calling the \texttt{lfth\_add} operation in an
@@ -260,48 +260,53 @@ asynchronous manner. For convenience, we will refer to $state[i]$ as
 the value of the state variable for thread $i$.
 
 
-Current verification technology can only hope for proving whether a
-property is \emph{inductive invariant}. Informally, given a state
-machine defined by $Init(x)$, a formula over a set of state variables
-$x$ that represents the set of initial states, and $Tr(x,x')$, the
-transition relation defining the new values $x'$ from the old values
-$x$, we say that a property $Inv(x)$ is inductive invariant if:
+Current verification technology typically focuses on proving
+invariants. This usually requires finding an inductive invariant that
+implies the property of interest. Given a state machine defined by
+$Init(x)$, a formula over a set of state variables $x$ that represents
+the set of initial states, and $Tr(x,x')$, the transition relation
+defining the new values $x'$ from the old values $x$, and the property
+of interest $Prop(x)$. We say that $Inv(x)$ is inductive invariant if:
 
 \begin{itemize}
 \item $Init(x) \Rightarrow Inv(x)$
 \item $Inv(x) \wedge Tr(x,x') \Rightarrow Inv(x')$
+\item $Inv(x) \Rightarrow Prop(x)$  
 \end{itemize}
 
-Unfortunately, the key invariant we wish to prove is not inductive
-invariant. A common solution to this problem is to find a
-\emph{strengthening} of the property we want to prove, $Inv'(x)$, such
-that $Inv(x)$ in conjunction with $Inv'(x)$ becomes inductive. That
-is,
+%% Unfortunately, the key invariant we wish to prove is not inductive
+%% invariant. A common solution to this problem is to find a
+%% \emph{strengthening} of the property we want to prove, $Inv'(x)$, such
+%% that $Inv(x)$ in conjunction with $Inv'(x)$ becomes inductive. That
+%% is,
 
-\begin{itemize}
-\item $Init(x) \Rightarrow (Inv(x) \wedge Inv'(x))$
-\item $(Inv(x) \wedge Inv'(x)) \wedge Tr(x,x') \Rightarrow (Inv(x') \wedge Inv'(x'))$
-\end{itemize}
+%% \begin{itemize}
+%% \item $Init(x) \Rightarrow (Inv(x) \wedge Inv'(x))$
+%% \item $(Inv(x) \wedge Inv'(x)) \wedge Tr(x,x') \Rightarrow (Inv(x') \wedge Inv'(x'))$
+%% \end{itemize}
 
-Complementary to strenghtening, a very powerful verification technique
-is $k$-induction~\cite{MouraRS03}, which is a generalization of
-induction\footnote{Induction is $k$-induction for $k=1$.}. We say a
-property $Inv(x)$ is $k$-inductive if:
+%% Complementary to strenghtening,
+
+A more powerful verification technique is called
+$k$-induction~\cite{MouraRS03}, a generalization of
+induction\footnote{Induction is $k$-induction for $k=1$.}. We say
+$Inv(x)$ is $k$-inductive if:
 
 \begin{itemize}
 \item $Init(x) \Rightarrow Inv(x)$
 \item $Inv(x) \wedge Tr(x,x') \wedge \ldots \wedge Inv(x^{k-1}) \wedge Tr(x^{k-1},x^{k}) \Rightarrow Inv(x^{k})$
+\item $Inv(x) \Rightarrow Prop(x)$    
 \end{itemize}
 
 
 We used the SAL language~\cite{bensalem2000overview,sal2} to encode
-the state machine and the key invariant. For the verification engine,
-we used Sally~\cite{sally}, a state-of-the-art model checker that
-combines k-induction with IC3~\cite{Bradley11}, another powerful
+the state machine and the property \textsf{MInv}. For the verification
+engine, we used Sally~\cite{sally}, a state-of-the-art model checker
+that combines k-induction with IC3~\cite{Bradley11}, another powerful
 technique to generate inductive invariants.  For that, we translated
 the SAL model to the internal format understood by Sally.  It turned
-out that Sally was not able to find an inductive strengthening in a
-reasonable amount of time.
+out that Sally was not able to find an inductive invariant that can
+imply our property in a reasonable amount of time.
 
 %% We used Sally~\cite{sally} a state-of-the-art model checker developed
 %% by SRI that combines k-induction with IC3~\cite{Bradley11}, another
@@ -315,7 +320,7 @@ reasonable amount of time.
 %% format and ran Sally on it.
 
 Since, it is not likely that current verification technology can prove
-our key invariant in a fully automatic manner we decided to help the
+our property \textsf{MInv} in a fully automatic manner we decided to help the
 verification process by manually adding auxiliary lemmas that can make
 our property inductive.
 %
@@ -325,8 +330,8 @@ our property inductive.
 %% Sally. However, SAL allows to write lemmas in a very expressive
 %% language which makes it more amenable for this semi-automatic
 %% process.
-Prior to presenting all lemmas needed to prove our key
-invariant, we define some helper functions:
+Prior to presenting all lemmas needed to prove \textsf{MInv}, we
+define some helper functions:
 
 \begin{minipage}{\linewidth}
 \vspace{3mm}
@@ -354,7 +359,7 @@ instance, for a given $N=6$ the definition of \textsf{is\_full}
 \[ (i=1 \wedge k \geq T \times 32) \vee (i=2 \wedge k \geq T \times 64) \vee \ldots \vee (i=6 \wedge k \geq T \times 1024) \]
 
 We are now ready to present all necessary lemmas used to make
-inductive our key invariant. All lemmas were constructed by-hand and
+\textsf{MInv} inductive. All lemmas were constructed by-hand and
 represent multiple days of effort. All these lemmas were obtained by
 trying to prove each lemma without any strengthening and inspecting a
 failed proof for inductiveness which helped us to further strengthen
@@ -378,7 +383,7 @@ the lemma.
 \label{empty_beyond_new}  
 \end{lemma}  
 
-\begin{lemma}[If a header does not exceed the occupancy threshold then all subsequent headers must be empty]
+\begin{lemma}[If a header does not exceed the capacity threshold then all subsequent headers must be empty]
   \begin{equation*}
 \begin{array}{l}        
   \forall 1 \leq i \leq N.  \negate{\mathsf{full}(i,
@@ -426,7 +431,7 @@ the lemma.
 \label{new_cannot_migrate}
 \end{lemma}  
 
-\begin{lemma}[The old table header always exceeds the occupancy threshold]
+\begin{lemma}[The old table header always exceeds the capacity threshold]
   \begin{equation*}
 \begin{array}{l}        
   old \neq new \Rightarrow \mathsf{is\_full}(old, \HT{old}.num\_entries)
@@ -581,7 +586,7 @@ the lemma.
 \begin{equation*}
 \begin{array}{l}  
   old < new \wedge \HT{old}.num\_to\_migrate \geq t \Rightarrow
-  \\ \HT{new}.num\_entries = T * mover\_count + adder\_count
+  \\ \HT{new}.num\_entries = T \times mover\_count + adder\_count
 \end{array}
 \end{equation*}
 \label{upper_strengthening2}  
@@ -650,7 +655,7 @@ the lemma.
       \ref{upper} & $\{$\ref{old_is_full},\ref{num_to_migrate_and_assimilated_in_old_tables},\ref{pending_lb},\ref{did_not_pay_ub},\ref{revenue1},\ref{revenue2},\ref{revenue3},\ref{posted1},\ref{upper_strengthening1}$\}$  \\
       \hline
       \hline
-      \textsf{Invariant} & $\{$\ref{table_sizes},\ref{pending},\ref{did_not_pay_ub},\ref{revenue2},\ref{revenue3},\ref{posted0},\ref{posted1},\ref{upper_strengthening1},\ref{out_of_mem},\ref{upper_global},\ref{upper} $\}$ \\
+      \textsf{MInv} & $\{$\ref{table_sizes},\ref{pending},\ref{did_not_pay_ub},\ref{revenue2},\ref{revenue3},\ref{posted0},\ref{posted1},\ref{upper_strengthening1},\ref{out_of_mem},\ref{upper_global},\ref{upper} $\}$ \\
       \hline 
     \end{tabular}
     \caption{Lemma dependencies: the lemma on the left is proved
@@ -662,12 +667,12 @@ the lemma.
 
 
 
-\paragraph{Experiments.} To prove lemmas \ref{old_and_new}-\ref{upper} and the key invariant we used the SAL
+\paragraph{Experiments.} To prove lemmas \ref{old_and_new}-\ref{upper} and the property \textsf{MInv} we used the SAL
 k-induction engine. Some lemmas were validated without further
 strengthening but some lemmas required the help of other lemmas,
 previously proved. Table~\ref{table:dependencies} shows the
-dependencies between lemmas. For Lemma~\ref{upper_global}, not all
-the lemmas on the right were needed but they improved significantly
+dependencies between lemmas. For Lemma~\ref{upper_global}, not all the
+lemmas on the right were needed but they improved significantly
 verification time.
 
 \begin{table}[t]
@@ -690,7 +695,7 @@ verification time.
       7 & 15 & 2745 \\      
       \hline 
     \end{tabular}
-    \caption{Proving key invariant (and all auxiliary lemmas) with SAL $k$-induction engine}
+    \caption{Proving \textsf{MInv} (and all auxiliary lemmas) with SAL $k$-induction engine}
     \label{sal-results}
     \end{center}
 \end{table}
@@ -698,7 +703,7 @@ verification time.
 
 Table~\ref{sal-results} shows the results of running SAL on a 3.5GHz
 Intel Xeon processor with 16 cores and 64GB on a Linux machine. We
-proved each lemma and the key invariant using the SAL command
+proved each lemma and the property using the SAL command
 \texttt{sal-inf-bmc -i -d \textsf{K} -s yices2}. We proved each lemma in
 order based on the dependencies shown in
 Table~\ref{table:dependencies}.
@@ -707,11 +712,11 @@ The first column denoted by \textsf{\# Threads} is the number of
 threads, the second column denoted by $\mathsf{K}$ is the induction
 depth for the $k$-induction engine, and the third column
 (\textsf{Time}) is the accumulated verification times for all lemmas
-and the key invariant in seconds. All the experiments assumed that the
+and the property in seconds. All the experiments assumed that the
 maximum number of allocated table headers is three. If this limit is exceeded
 the state machine moves to \pcthree\ state.
 %
-We were able to prove that our invariant holds up to seven
+We were able to prove that \textsf{MInv} holds up to seven
 threads. All lemmas were proved using $K=1$, except
 Lemma~\ref{upper_global} which needed up to depth $15$ for seven
 threads.
