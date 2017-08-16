@@ -46,9 +46,6 @@ transition relation is stated as guarded commands, where the guard
 triggers a particular transition.  We first describe the state
 variables and then all the machine transitions.
 
-\jorge{I try to use the term ``arrays'' for each table copy and the
-  term ``table'' for the whole hash table. Need to review this}
-
 \subsubsection{State Variables}
 
 A variable \texttt{state} records one of the four possible states
@@ -57,13 +54,13 @@ shown in the configuration diagram in Figure~\ref{fig:model}:
 %
 From \pczero, the initial state, the machine can transition to
 \pcone\ by taking two different actions: migrating some entries from
-the old array to the new one (\textbf{migrate}) or as a non-op action
+the old table to the new one (\textbf{migrate}) or as a non-op action
 in case that no migration is required (\textbf{no-migrate}). Only when
 the machine is at \pcone, the entry can be added into the new
-array. The state machine can either move to \pctwo\ if there is space
+table. The state machine can either move to \pctwo\ if there is space
 in the new table (\textbf{add}) or it can go back to the initial state
 if the new table is full (\textbf{full}). Once a new entry has been
-added into the new array, the hash table might need to grow. If this
+added into the new table, the hash table might need to grow. If this
 is the case, then the state machine goes back to \pczero\ by taking
 the transition \textbf{grow}, otherwise it goes also to \pczero\ but
 taking this time the transition \textbf{no-grow}. If there is no more
@@ -72,45 +69,59 @@ state indicating that the there is no more memory and the machine
 stays there forever.
 
 The other key state variable is \texttt{ht} which represents the hash
-table in our abstract model.  A hash table is modeled by a list of
-size $N$ of \texttt{header} elements. The type \texttt{header} is a
+table in our abstract model.  Since we allow the hash table to grow by
+making a new copy and the old copy cannot be immediately freed due to
+thread interactions, our model must keep track of both the new table
+and all its old copies. Taking this into consideration, the hash table
+is modeled by an array of size $N$ of \texttt{header} elements. The
+array is indexed starting from $1$. The type \texttt{header} is a
 record of \emph{num\_entries}, \emph{num\_to\_migrate}, and
 \emph{assimilated} where \emph{num\_entries} is a non-negative integer
-that keeps track of the number of entries in the array,
+that keeps track of the number of entries in the table,
 \emph{num\_to\_migrate} is another non-negative integer that
 represents the number of entries that needs to be migrated to the new
-array, and \emph{assimilated} is a boolean that indicates whether the
-array has been assimilated or not. Note that our abstract model
+table, and \emph{assimilated} is a boolean that indicates whether the
+table copy has been assimilated or not. Note that our abstract model
 ignores the contents of the actual hash table since they are
-irrelevant to the properties we are interested as we shall show
-later. \todo{list limitations of the model (e.g., counters updates are
-  considered atomic, no handle)}. For convenience, the arrays in our
-abstract model are in the reverse order, compared to the actual
-implementation. That is, the newest copy is the last element of the
-list.  Our abstract model needs to distinguish between the new array
-and the old one. This information is stored in the indexes
-\texttt{old} and \texttt{new}, respectively. The variable
-\texttt{cur\_sz} represents the size of the new array. The value of
+irrelevant to the properties we are interested. \todo{list limitations
+  of the model (e.g., counters updates are considered atomic, no
+  handle)}. For convenience, the table headers in our abstract model
+are in the reverse order, compared to the actual implementation.  Our
+abstract model keeps track of the array slots that represent the new
+table and its previous version. This information is stored in the
+indexes \texttt{new} and \texttt{old}, respectively. The variable
+\texttt{cur\_sz} represents the size of the new table. The value of
 \texttt{cur\_sz} is doubled each time the hash table needs to grow.
 
 To make our proofs simpler and more efficient, our abstract model also
-keeps track of several counters to monitorize thread's
-activities\jorge{rename these counters!}:
+keeps track of several counters to monitor thread's activities:
 
 \begin{itemize}
-\item \texttt{pending}: number of threads at state \pcone.
-\item \texttt{did\_not\_pay}: number of threads that added an entry
-  without migrating entries from the old to the new array.
-\item \texttt{paid\_tax}: number of threads that migrated entries.
-\item \texttt{posted}: number of threads that added entries.
-\item \texttt{revenue}: number of migrated entries.  
+
+\item \texttt{pending}: number of pending additions to the table, this
+  is the number of threads at state \pcone.
+
+\item \texttt{migrated\_entries}: number of entries that have been
+  copied from the old table into the new one.
+
+\item \texttt{mover\_count}: number of threads that have copied
+  entries from the old table to the new one.
+
+\item \texttt{adder\_count}: number of threads that added entries into
+  the new table.
+  
+\item \texttt{freebie\_count}: number of threads that were in state
+  \pcone when a new table was allocated. These threads will add
+  entries into the new table without copying from the old to the new
+  table.
+
 \end{itemize}  
 
 \subsubsection{Transitions}
 
 In this section, we show in detail all the transitions of our abstract
 model. Our model makes use of several constant parameters: $N$ is the
-number of arrays, $T$ is the occupancy threshold, $M$ is the number of
+number of table headers, $T$ is the occupancy threshold, $M$ is the number of
 entries that each threshold needs to migrate before adding a new
 entry, and $P$ is the number of threads. For convenience, we assume a
 type \texttt{table\_index} which denotes all natural numbers in the
@@ -132,7 +143,7 @@ range $[1,\ldots,N]$.
   $\HT{1,\ldots,N} := \{ num\_to\_entries := 0, num\_to\_migrate := 0, assimilated := false \}$ \\  
   $cur\_sz := 32$ \\
   $old := new := 1$ \\
-  $pending := did\_not\_pay := paid\_tax := posted := revenue := 0$}
+  $pending := freebie\_count := mover\_count := adder\_count := migrated\_entries := 0$}
 \end{minipage}
 
 
@@ -145,8 +156,8 @@ range $[1,\ldots,N]$.
   \> $\HT{new}.num\_entries \incr num\_to\_migrate $ \\
   \> $\HT{old}.num\_entries \decr num\_to\_migrate$ \\
   \> $\HT{old}.assimilated := (\HT{old}.num\_to\_migrate = 0)$ \\
-  \> $pending \incr 1$, $paid\_tax \incr 1$ \\
-  \> $revenue \incr num\_to\_migrate$\\
+  \> $pending \incr 1$, $mover\_count \incr 1$ \\
+  \> $migrated\_entries \incr num\_to\_migrate$\\
   \> $state := \pcone$}
 \end{minipage}
 
@@ -167,7 +178,7 @@ range $[1,\ldots,N]$.
   $state=\pcone \wedge (\HT{new}.num\_entries < cur\_sz) \rightarrow$ \\
   \> $\HT{new}.num\_entries \incr 1$ \\
   \> $pending \decr 1$ \\
-  \> $posted \incr 1$ \\
+  \> $adder\_count \incr 1$ \\
   \> $state := \pctwo$}
 \end{minipage}
 
@@ -177,7 +188,7 @@ range $[1,\ldots,N]$.
 \pcode[\small]{
   $state=\pcone \wedge (\HT{new}.num\_entries \geq cur\_sz) \rightarrow$ \\
   \> $pending \decr 1$ \\
-  \> $did\_not\_pay \decr 1$ \\
+  \> $freebie\_count \decr 1$ \\
   \> $state := \pczero$}
 \end{minipage}
 
@@ -193,8 +204,8 @@ range $[1,\ldots,N]$.
   \> $\HT{new+1}.num\_to\_migrate := 0$ \\
   \> $\HT{new+1}.assimilated := false$ \\
   \> $\HT{new}.num\_to\_migrate := \HT{new}.num\_entries$ \\                
-  \> $did\_not\_pay := pending$ \\
-  \> $paid\_tax :=  revenue := posted := 0$ \\
+  \> $freebie\_count := pending$ \\
+  \> $mover\_count :=  migrated\_entries := adder\_count := 0$ \\
   \> $state := \pczero$}
 \end{minipage}
 
@@ -222,7 +233,7 @@ We are interested in proving a key invariant in the implementation of
 our hash table. This invariant reflects that migration is always from
 the old table to the new one regardless of the number of
 copies. Informally, for all indexes $i \in \{1, \ldots, N\}$ such that
-$i < old$ then the array $i$ must be assimilated. This can be stated
+$i < old$ then the table header $i$ must be assimilated. This can be stated
 more formally as follows:
 
   \[ \forall 1 \leq i \leq N.~ i < old \Rightarrow \HT{i}.assimilated \]
@@ -318,7 +329,7 @@ invariant, we define some helper functions:
 \noindent Note that the table indexes ranges from $1$ to $N$. The
 definition of \textsf{is\_empty} is straightforward. However, the
 definitions of \textsf{is\_full} and \textsf{size} require some
-explanation. Since the number of table arrays is constant (given by
+explanation. Since the number of table headers is constant (given by
 $N$) instead of using the above definitions we unfold them into a
 disjunction of simpler constraints that avoids exponentiation. For
 instance, for a given $N=6$ the definition of \textsf{is\_full}
@@ -333,16 +344,7 @@ trying to prove each lemma without any strengthening and inspecting a
 failed proof for inductiveness which helped us to further strengthen
 the lemma.
 
-\jorge{I think we can split lemmas in the following groups: only about
-  old (Lemmas~\ref{old_is_full}), only about new
-  (Lemmas~\ref{new_cannot_be_assimilated},\ref{new_cannot_migrate}),
-  relating old and new (Lemmas~\ref{old_and_new}), for multiple
-  tables
-  (Lemmas~\ref{empty_beyond_new},\ref{empty_beyond_non_full},\ref{num_to_migrate_and_num_entries},\ref{table_sizes},\ref{not_full_cannot_be_assimilated},\ref{assimilated_nothing_to_migrate},\ref{num_to_migrate_and_assimilated_in_old_tables},\ref{upper_global}),
-  and thread related
-  (Lemmas~\ref{one_thread_at_init_state_after_migration},\ref{pending},\ref{pending_lb},\ref{did_not_pay_ub},\ref{paid_tax0},\ref{paid_tax1},\ref{revenue1},\ref{revenue2},\ref{revenue3},\ref{posted0},\ref{posted1},\ref{out_of_mem}). Still need to categorize ~\ref{upper_strengthening1},\ref{upper_strengthening2},\ref{upper_strengthening3},\ref{upper},etc}
-
-\begin{lemma}[Order between old and new array]
+\begin{lemma}[Relationship between \texttt{old} and \texttt{new}]
   \begin{equation*}
     \begin{array}{l}      
       (new = 1 \wedge old = 1) \vee (new = old+1)
@@ -351,7 +353,7 @@ the lemma.
   \label{old_and_new}
 \end{lemma}
 
-\begin{lemma}[After new arrray, all arrays must be empty]
+\begin{lemma}[All table headers after \texttt{new} must be empty]
   \begin{equation*}
 \begin{array}{l}      
   \forall 1 \leq i \leq N.  \wedge i > new \Rightarrow \mathsf{is\_empty}(\HT{i})
@@ -360,7 +362,7 @@ the lemma.
 \label{empty_beyond_new}  
 \end{lemma}  
 
-\begin{lemma}[If an array is not exceed the occupancy threaholds then all arrays after it  must be empty]
+\begin{lemma}[If a header does not exceed the occupancy threshold then all subsequent headers must be empty]
   \begin{equation*}
 \begin{array}{l}        
   \forall 1 \leq i \leq N.  \negate{\mathsf{full}(i,
@@ -372,7 +374,7 @@ the lemma.
 \label{empty_beyond_non_full}
 \end{lemma}
 
-\begin{lemma}[Number of migrations cannot exceed the number of entries]
+\begin{lemma}[Number of pending migrations in a header cannot exceed its number of entries]
   \begin{equation*}
 \begin{array}{l}        
   \forall 1 \leq i \leq N. \HT{i}.num\_to\_migrate \leq \HT{i}.num\_entries
@@ -381,7 +383,7 @@ the lemma.
 \label{num_to_migrate_and_num_entries}
 \end{lemma}  
 
-\begin{lemma}[Size of each array]
+\begin{lemma}[Size of the new table header]
   \begin{equation*}
 \begin{array}{l}        
   \mathsf{size}(new) = cur\_sz
@@ -390,7 +392,7 @@ the lemma.
 \label{table_sizes}
 \end{lemma}  
 
-\begin{lemma}[The new array cannot be assimilated]
+\begin{lemma}[The new table header cannot be assimilated]
   \begin{equation*}
 \begin{array}{l}        
   \negate{\HT{new}.assimilated}
@@ -399,7 +401,7 @@ the lemma.
 \label{new_cannot_be_assimilated}
 \end{lemma}  
 
-\begin{lemma}[The new array cannot have any entry to migrate]
+\begin{lemma}[The new table header cannot have any entry to migrate]
   \begin{equation*}
 \begin{array}{l}      
   \HT{new}.num\_to\_migrate = 0
@@ -408,7 +410,7 @@ the lemma.
 \label{new_cannot_migrate}
 \end{lemma}  
 
-\begin{lemma}[The old array, if different from new, always exceeds the occupancy threshold]
+\begin{lemma}[The old table header always exceeds the occupancy threshold]
   \begin{equation*}
 \begin{array}{l}        
   old \neq new \Rightarrow \mathsf{is\_full}(old, \HT{old}.num\_entries)
@@ -417,7 +419,7 @@ the lemma.
   \label{old_is_full}
 \end{lemma}  
 
-\begin{lemma}[If an array is not full then it cannot be assimilated]
+\begin{lemma}[If a table header is not full then it cannot be assimilated]
   \begin{equation*}
 \begin{array}{l}      
   \forall 1 \leq i \leq N. \negate{\mathsf{is\_full}(i,\HT{i}.num\_entires)} \Rightarrow \negate{\HT{i}.assimilated}
@@ -426,7 +428,7 @@ the lemma.
   \label{not_full_cannot_be_assimilated}  
 \end{lemma}  
 
-\begin{lemma}[If an array is assimilated then there is no more entries to migrate]
+\begin{lemma}[If a table header is assimilated then it cannot have more pending migrations]
   \begin{equation*}
 \begin{array}{l}        
   \forall 1 \leq i \leq N. \HT{i}.assimilated \Rightarrow \HT{i}.num\_to\_migrate = 0
@@ -435,7 +437,7 @@ the lemma.
   \label{assimilated_nothing_to_migrate}  
 \end{lemma}  
 
-\begin{lemma}[Relationship between number to migrate and assimilated flag in the old arrays]
+\begin{lemma}[Relationship between number of pending migrations and assimilated flag in the old headers]
   \begin{equation*}
     \begin{array}{l}
     \forall 1 \leq i \leq N. i \leq old \wedge old < new \Rightarrow  \\
@@ -446,7 +448,7 @@ the lemma.
   \label{num_to_migrate_and_assimilated_in_old_tables}  
 \end{lemma}  
 
-\begin{lemma}[At least one thread must be at the initial state after migration finished]
+\begin{lemma}[At least one thread must be at the initial state after migration was completed]
   \begin{equation*}
     \begin{array}{l}
       old \neq new \wedge (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate) = 0 \wedge \HT{new}.num\_entries = 0 \Rightarrow \\
@@ -477,103 +479,103 @@ the lemma.
 \end{lemma}  
 
 
-\begin{lemma}[Upper bound for did\_not\_pay]
+\begin{lemma}[Upper bound for freebie\_count]
   \begin{equation*}
 \begin{array}{l}        
-  did\_not\_pay < P
+  freebie\_count < P
 \end{array}
   \end{equation*}  
   \label{did_not_pay_ub}    
 \end{lemma}  
 
-\begin{lemma}[Exact bound for paid\_tax before having copies]
+\begin{lemma}[Exact bound for mover\_count before having multiple table copies]
   \begin{equation*}
 \begin{array}{l}        
-  old = new \Rightarrow paid\_tax = 0
+  old = new \Rightarrow mover\_count = 0
 \end{array}
   \end{equation*} 
   \label{paid_tax0}    
 \end{lemma}  
 
-\begin{lemma}[Lower bound for paid\_tax]        
+\begin{lemma}[Lower bound for mover\_count]        
   \begin{equation*}
 \begin{array}{l}
-  paid\_tax \geq 0
+  mover\_count \geq 0
 \end{array}
 \end{equation*}
   \label{paid_tax1}  
 \end{lemma}
 
 
-\begin{lemma}[Exact bound for revenue if table grew]
+\begin{lemma}[Exact bound for migrated\_entries if multiple table copies]
   \begin{equation*}
 \begin{array}{l}        
-  old < new \Rightarrow revenue = \HT{old}.num\_entries - \HT{old}.num\_to\_migrate
+  old < new \Rightarrow migrated\_entries = \HT{old}.num\_entries - \HT{old}.num\_to\_migrate
 \end{array}
 \end{equation*}  
   \label{revenue1}    
 \end{lemma}
 
-\begin{lemma}[Upper bound for revenue if table grew]
+\begin{lemma}[Upper bound for migrated\_entries if multiple table copies]
   \begin{equation*}
 \begin{array}{l}        
-  old < new \Rightarrow revenue \leq \HT{old}.num\_entries
+  old < new \Rightarrow migrated\_entries \leq \HT{old}.num\_entries
 \end{array}
 \end{equation*}
   \label{revenue2}    
 \end{lemma}
 
-\begin{lemma}[Relationship between number to migrate in the old array, revenue and paid\_tax]
+\begin{lemma}[Relationship between number of pending migrations in the old header, migrated\_entries and mover\_count]
     \begin{equation*}
 \begin{array}{l}      
-  old < new \wedge \HT{old}.num\_to\_migrate > 0 \Rightarrow revenue = T \times paid\_tax
+  old < new \wedge \HT{old}.num\_to\_migrate > 0 \Rightarrow migrated\_entries = T \times mover\_count
 \end{array}
     \end{equation*}  
     \label{revenue3}    
 \end{lemma}
 
-\begin{lemma}[Lower bound for posted]
+\begin{lemma}[Lower bound for adder\_count]
     \begin{equation*}
 \begin{array}{l}      
-  posted \geq 0
+  adder\_count \geq 0
 \end{array}
     \end{equation*}  
     \label{posted0}  
 \end{lemma}
 
-\begin{lemma}[Relationship between assimilated in the old array, posted, pending, paid\_tax and did\_not\_pay]
+\begin{lemma}[Relationship between assimilated in the old header, pending, mover\_count, adder\_count, and freebie\_count]
   \begin{equation*}
     \begin{array}{l}      
-      old < new \wedge \HT{old}.assimilated \Rightarrow posted+ pending = paid\_tax + did\_not\_pay
+      old < new \wedge \HT{old}.assimilated \Rightarrow adder\_count+ pending = mover\_count + freebie\_count
     \end{array}
   \end{equation*}    
   \label{posted1}
 \end{lemma}
 
-\begin{lemma}[Relationship between number of entries in the new array, paid\_tax, and posted]
+\begin{lemma}[Relationship between number of entries in the new header, mover\_count, and adder\_count]
   \begin{equation*}
     \begin{array}{l}      
-      old < new \Rightarrow \HT{new}.num\_entries \leq T \times paid\_tax + posted
+      old < new \Rightarrow \HT{new}.num\_entries \leq T \times mover\_count + adder\_count
     \end{array}
   \end{equation*}  
   \label{upper_strengthening1}
 \end{lemma}
 
-\begin{lemma}[Relationship between number of entries in the new array, number to migrate in the old,  paid\_tax, posted]
+\begin{lemma}[Relationship between number of entries in the new header, number of pending migrations in the old header,  mover\_count, adder\_count]
 \begin{equation*}
 \begin{array}{l}  
-  old < new \wedge \HT{old}.num\_to\_migrate \geq t \Rightarrow \\
-  \HT{new}.num\_entries = T * paid\_tax + posted
+  old < new \wedge \HT{old}.num\_to\_migrate \geq t \Rightarrow
+  \\ \HT{new}.num\_entries = T * mover\_count + adder\_count
 \end{array}
 \end{equation*}
 \label{upper_strengthening2}  
 \end{lemma}
 
-\begin{lemma}[Exact bound of the number of entries for the new array]
+\begin{lemma}[Exact bound of the number of entries in the new header]
   \begin{equation*}
     \begin{array}{l}  
       old < new \Rightarrow \\
-  \HT{new}.num\_entries = (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate) + posted
+  \HT{new}.num\_entries = (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate) + adder\_count
 \end{array}
 \end{equation*}
   \label{upper_strengthening3}  
@@ -589,7 +591,7 @@ the lemma.
 \end{lemma}
 
 
-\begin{lemma}[Upper bound of the number of entries for all arrays]
+\begin{lemma}[Upper bound of the number of entries in all headers]
   \begin{equation*}
 \begin{array}{l}      
   \forall 1 \leq i < N. \HT{i}.num\_entries \leq (T \times \mathsf{size}(i)) + P
@@ -598,7 +600,7 @@ the lemma.
   \label{upper_global}
 \end{lemma}
 
-\begin{lemma}[Upper bound of the number of entries for old arrays]
+\begin{lemma}[Upper bound of the number of entries in old headers]
   \begin{equation*}
 \begin{array}{l}    
   old < new \wedge \negate{\HT{old}.assimilated} \Rightarrow \\
@@ -668,7 +670,7 @@ right were needed but they improved significantly verification time.
       7 & 15 & 2745 \\      
       \hline 
     \end{tabular}
-    \caption{Proving key invariant (and all auxiliary lemmas) with SAL up to 7 threads}
+    \caption{Proving key invariant (and all auxiliary lemmas) with SAL $k$-induction engine}
     \label{sal-results}
     \end{center}
 \end{table}
@@ -686,13 +688,14 @@ threads, the second column denoted by $\mathsf{K}$ is the induction
 depth for the $k$-induction engine, and the third column
 (\textsf{Time}) is the accumulated verification times for all lemmas
 and the key invariant in seconds. All the experiments assumed that the
-maximum number of allocated arrays is three. If this limit is exceeded
+maximum number of allocated table headers is three. If this limit is exceeded
 the state machine moves to \pcthree\ state.
 %
 We were able to prove that our invariant holds up to seven
 threads. All lemmas were proven using $K=1$, except
 Lemma~\ref{upper_global} which needed up to depth $15$ for seven
 threads.
+%
 
 
 
