@@ -323,7 +323,7 @@ upper_global :  LEMMA
 		   
 
 % PROVED  
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper -l pending_lb -l old_is_full -l num_to_migrate_and_assimilated_in_old_tables -l upper_strengthening_1 -l posted_1 -l did_not_pay_ub  -l revenue_2 -l revenue_3 
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper -l pending_lb -l old_is_full -l num_to_migrate_and_assimilated_in_old_tables -l upper_strengthening_1 -l posted_1 -l did_not_pay_ub -l revenue_1 -l revenue_2 -l revenue_3 
 upper :  LEMMA
       system |- G( (old < new  AND not ht[old].assimilated  =>  
                     (ht[new].num_entries <= Migrated(ht,old) + (Migrated(ht,old) / T) +  (NUM_THREADS-1) + pending)));
