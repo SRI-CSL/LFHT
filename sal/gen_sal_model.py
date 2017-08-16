@@ -17,7 +17,10 @@ Usage: {0} N K T
 # These parameters have been selected after experimenting with the 
 # number of threads.
 def choose_k_induction(N):
-    if N <= 5: return 11
+    if N <= 2: return 5
+    elif N == 3: return 7
+    elif N == 4: return 9
+    elif N == 5: return 11
     elif N == 6: return 13
     elif N == 7: return 15
     else: return 15 
