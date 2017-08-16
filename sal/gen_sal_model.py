@@ -6,13 +6,22 @@ from stringbuffer import StringBuffer
 from math import pow
 
 usage = """
-Usage: {0} N K T 
+Usage: {0} N K T
   where 
   - N is the number of threads
   - K is the number of tables
   - T is the tax
 """
 
+# Choose the induction level based on the number of threads
+# These parameters have been selected after experimenting with the 
+# number of threads.
+def choose_k_induction(N):
+    if N <= 5: return 11
+    elif N == 6: return 13
+    elif N == 7: return 15
+    else: return 15 
+        
 def mk_begin_context(N,K,T):
     sb = StringBuffer()
     sb.append("lfht_{0}_{1}_{2}: CONTEXT =\n".format(N,K,T))
@@ -107,7 +116,7 @@ END;
 
 def mk_table_size_def(N):
     sb = StringBuffer()
-    sb.append("table_size(i: table_index, k:nat): bool =\n")
+    sb.append("is_table_size(i: table_index, k:nat): bool =\n")
     k = 5 ## 2^5 = 32
     for i in range(N): 
         sb.append("(i={0} and k={1})".format(i+1,int(pow(2,k+i))))
@@ -117,21 +126,9 @@ def mk_table_size_def(N):
             sb.append(";\n")
     return str(sb)    
 
-def mk_full_table(N):
-    sb = StringBuffer()
-    sb.append("full_table(i: table_index, k:nat): bool =\n")
-    k = 5 ## 2^5 = 32
-    for i in range(N):
-        sb.append("(i={0} and k>={1} * THRESHOLD)".format(i+1,int(pow(2,k+i))))
-        if i < N-1:
-            sb.append(" OR ")
-        else:
-            sb.append(";\n")
-    return str(sb)    
-
 def mk_max_size(N):
     sb = StringBuffer()
-    sb.append("max_size(i: table_index): nat =\n")
+    sb.append("table_size(i: table_index): nat =\n")
     k = 5 ## 2^5 = 32
     for i in range(N):
         if i == 0:
@@ -142,6 +139,19 @@ def mk_max_size(N):
             sb.append("ELSE {0}\n".format(int(pow(2,k+i))))
     sb.append("ENDIF;\n")
     return str(sb)    
+
+def mk_full_table(N):
+    sb = StringBuffer()
+    sb.append("is_full_table(i: table_index, k:nat): bool =\n")
+    k = 5 ## 2^5 = 32
+    for i in range(N):
+        sb.append("(i={0} and k>={1} * THRESHOLD)".format(i+1,int(pow(2,k+i))))
+        if i < N-1:
+            sb.append(" OR ")
+        else:
+            sb.append(";\n")
+    return str(sb)    
+
 
 def mk_helpers(N):
     sb = StringBuffer()
@@ -160,9 +170,8 @@ system: MODULE = WITH OUTPUT pc: ARRAY thread OF [0 .. 3]
       ([] (i: thread): (RENAME pc TO pc[i] IN add));
 """
 
-def mk_pending_lemma(N,Filename):
+def mk_pending_lemma(N):
     sb = StringBuffer()
-    sb.append("% PROVED\n% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} pending\n".format(Filename))
     sb.append("pending: LEMMA system |- G( pending =")
     for i in range(N):
         sb.append("(IF pc[{0}] = 1 THEN 1 ELSE 0 ENDIF)".format(i+1))
@@ -171,79 +180,75 @@ def mk_pending_lemma(N,Filename):
     sb.append(");\n")
     return str(sb)
 
-def mk_lemmas(N,Filename):
+def mk_lemmas(N, Filename):
 
     lemmas = """
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma1
-lemma1: LEMMA system |- G((new = 1 and old = 1) or (new = old+1));
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} old_and_new
+old_and_new: LEMMA system |- G((new = 1 and old = 1) or (new = old+1));
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma2 -l lemma1
-lemma2: LEMMA system |- G(FORALL (i: table_index): i > new => ht[i].num_entries = 0 and ht[i].num_to_migrate=0 and not ht[i].assimilated);
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} empty_beyond_new 
+empty_beyond_new: LEMMA system |- G(FORALL (i: table_index): i > new => ht[i].num_entries = 0 and ht[i].num_to_migrate=0 and not ht[i].assimilated);
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma2a
-lemma2a: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) AND table_size(i, ht[i].num_entries) => FORALL (j: table_index): j > i => ht[j].num_entries = 0 and ht[j].num_to_migrate=0 and not ht[j].assimilated);
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} empty_beyond_non_full
+empty_beyond_non_full: LEMMA system |- G(FORALL (i: table_index): NOT is_full_table(i, ht[i].num_entries) AND is_table_size(i, ht[i].num_entries) => FORALL (j: table_index): j > i => ht[j].num_entries = 0 and ht[j].num_to_migrate=0 and not ht[j].assimilated);
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma3
-lemma3: LEMMA system |- G(FORALL (i: table_index): ht[i].num_to_migrate <= ht[i].num_entries);
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} num_to_migrate_and_num_entries
+num_to_migrate_and_num_entries: LEMMA system |- G(FORALL (i: table_index): ht[i].num_to_migrate <= ht[i].num_entries);
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma4
-lemma4: LEMMA system |- G(table_size (new, K));
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} table_sizes
+table_sizes: LEMMA system |- G(is_table_size (new, K));
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma5a -l lemma1 -l lemma4
-lemma5a: LEMMA system |- G(NOT ht[new].assimilated);
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} new_cannot_be_assimilated -l table_sizes
+new_cannot_be_assimilated: LEMMA system |- G(NOT ht[new].assimilated);
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma5b -l lemma1 -l lemma4
-lemma5b: LEMMA system |- G(ht[new].num_to_migrate = 0);
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} new_cannot_migrate -l table_sizes
+new_cannot_migrate: LEMMA system |- G(ht[new].num_to_migrate = 0);
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma5c -l lemma1 -l lemma4
-lemma5c: LEMMA system |- G(old = new OR full_table(old, ht[old].num_entries));
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} old_tables_are_full -l table_sizes
+old_tables_are_full: LEMMA system |- G(old = new OR is_full_table(old, ht[old].num_entries));
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma5e -l lemma4 -l lemma5c
-lemma5e: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) => NOT ht[i].assimilated);
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} not_full_cannot_be_assimilated -l old_tables_are_full
+not_full_cannot_be_assimilated: LEMMA system |- G(FORALL (i: table_index): NOT is_full_table(i, ht[i].num_entries) => NOT ht[i].assimilated);
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma5f -l lemma4
-lemma5f: LEMMA system |- G(FORALL (i: table_index): NOT full_table(i, ht[i].num_entries) => ht[i].num_to_migrate=0);
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} assimilated_nothing_to_migrate -l new_cannot_be_assimilated
+assimilated_nothing_to_migrate: LEMMA system |- G(FORALL (i: table_index): ht[i].assimilated => ht[i].num_to_migrate=0);
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma5g -l lemma1 -l lemma2 -l lemma3 -l lemma4  -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f 
-lemma5g: LEMMA system |- G(FORALL (i: table_index): ht[i].assimilated => ht[i].num_to_migrate=0);
-
-% PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} final
-final : LEMMA
-    system |- G((EXISTS (i: thread): pc[i] = 3) => new = N);
-
-% PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma6 -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g 
-lemma6 : LEMMA
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} num_to_migrate_and_assimilated_in_old_tables -l old_and_new -l new_cannot_be_assimilated -l old_tables_are_full 
+num_to_migrate_and_assimilated_in_old_tables : LEMMA
     system |- G(FORALL (i: table_index):
 	           i <= old AND old < new =>
-		        (full_table(i, ht[i].num_entries) => (ht[i].num_to_migrate = 0 <=> ht[i].assimilated)) AND
-                        (NOT full_table(i, ht[i].num_entries) => NOT (ht[i].assimilated AND ht[i].num_to_migrate = 0)));
-
+		        (is_full_table(i, ht[i].num_entries) => (ht[i].num_to_migrate = 0 <=> ht[i].assimilated)) AND
+                        (NOT is_full_table(i, ht[i].num_entries) => NOT (ht[i].assimilated AND ht[i].num_to_migrate = 0)));
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} lemma8b -l lemma1 -l lemma2 -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 
-lemma8b : LEMMA
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} one_thread_at_init_state_after_migration  -l old_tables_are_full  -l assimilated_nothing_to_migrate 
+one_thread_at_init_state_after_migration : LEMMA
     system |- G((old < new AND Migrated(ht,old) = 0 AND ht[new].num_entries = 0) => 
 	 	        (EXISTS (i: thread): pc[i] = 0));
+
+%%% BEGIN COUNTERS %%%
+
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} pending
+{2}
 
 % PROVED
 % sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} pending_lb -l pending
 pending_lb : LEMMA system |- G( pending >= 0 );
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} did_not_pay_ub -l pending_lb -l pending
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} did_not_pay_ub -l pending
 did_not_pay_ub : LEMMA
       system |- G( did_not_pay < NUM_THREADS);		
 
@@ -252,19 +257,9 @@ did_not_pay_ub : LEMMA
 paid_tax_0 : LEMMA
       system |- G( old = new => paid_tax = 0 );		
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} paid_tax_1 -l pending_lb -l pending
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} paid_tax_1 
 paid_tax_1 : LEMMA
       system |- G( paid_tax >= 0);		
-
-% PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} revenue_0
-revenue_0 : LEMMA
-      system |- G( old = new => revenue = 0 );		
-
-% PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} revenue_1 -l pending_lb -l pending
-revenue_1 : LEMMA
-      system |- G( revenue >= 0);		
 
 % PROVED
 % sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} revenue_2 
@@ -272,76 +267,80 @@ revenue_2 : LEMMA
       system |- G( old < new =>  revenue = Migrated(ht,old));		
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} revenue_3 -l revenue_0 -l revenue_1 -l revenue_2
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} revenue_3 -l revenue_2
 revenue_3 : LEMMA
       system |- G( old < new => revenue <= ht[old].num_entries);		
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} revenue_4 -l revenue_0 -l revenue_1 -l revenue_2 -l revenue_3
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} revenue_4 
 revenue_4 : LEMMA
       system |- G( old < new AND ht[old].num_to_migrate > 0 => revenue = T * paid_tax);
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} revenue_5 -l revenue_0 -l revenue_1 -l revenue_2 -l revenue_3 -l revenue_4
-revenue_5 : LEMMA
-      system |- G( old < new AND ht[old].num_to_migrate = 0 => revenue = ht[old].num_entries);
-
-% PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} posted_0 -l pending_lb -l pending
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} posted_0 
 posted_0 : LEMMA
       system |- G( posted >= 0);		
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} posted_1 -l posted_0 -l paid_tax_0 -l paid_tax_1 -l pending_lb -l pending -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4  -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} posted_1 
 posted_1 : LEMMA
       system |- G( old < new AND not ht[old].assimilated => 
 	           posted + pending =  paid_tax + did_not_pay);		
 		       
+%%% END COUNTERS %%%
+
+%%% BEGIN strengthening used for upper lemmas %%%%
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper_strengthening_2 -l pending_lb -l pending -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g
-upper_strengthening_2 :  LEMMA
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper_strengthening_1 
+upper_strengthening_1 :  LEMMA
        system |- G( (old < new => ht[new].num_entries <= T * paid_tax + posted));
 
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper_strengthening_3 -l pending_lb -l pending  -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g
-upper_strengthening_3 :  LEMMA
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper_strengthening_2 
+upper_strengthening_2 :  LEMMA
        system |- G( (old < new AND ht[old].num_to_migrate >= T => ht[new].num_entries = T * paid_tax + posted));
 
 % PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper_strengthening_3a -l pending_lb -l pending  -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g
-upper_strengthening_3a :  LEMMA
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper_strengthening_3
+upper_strengthening_3 :  LEMMA
        system |- G( (old < new => ht[new].num_entries <= T * paid_tax + posted));
 
 % PROVED 
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper_strengthening_5 -l pending_lb -l pending -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g 
-upper_strengthening_5 :  LEMMA
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper_strengthening_4 
+upper_strengthening_4 :  LEMMA
        system |- G( (old < new => ht[new].num_entries = Migrated(ht, old) + posted));
 
+% PROVED
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} out_of_mem
+out_of_mem : LEMMA
+    system |- G((EXISTS (i: thread): pc[i] = 3) => new = N);
+%%% END strengthening used for upper lemmas %%%%
+
 % PROVED 
-% sal-inf-bmc -i -ice -v 1 -d 15 -s yices2 {0} upper_global -l pending_lb -l pending -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma8b -l upper_strengthening_2 -l upper_strengthening_3 -l upper_strengthening_3a -l paid_tax_0 -l paid_tax_1 -l posted_0 -l posted_1 -l did_not_pay_ub  -l upper_strengthening_5 -l revenue_0 -l revenue_1 -l revenue_2 -l final -l revenue_3 -l revenue_4 -l revenue_5
+% sal-inf-bmc -i -ice -v 1 -d {1} -s yices2 {0} upper_global -l pending_lb -l pending -l old_and_new -l empty_beyond_new -l empty_beyond_non_full -l num_to_migrate_and_num_entries -l table_sizes   -l new_cannot_migrate -l old_tables_are_full -l not_full_cannot_be_assimilated -l assimilated_nothing_to_migrate -l one_thread_at_init_state_after_migration -l upper_strengthening_1 -l upper_strengthening_2 -l upper_strengthening_3 -l paid_tax_0 -l paid_tax_1 -l posted_0 -l posted_1 -l did_not_pay_ub  -l upper_strengthening_4  -l out_of_mem -l revenue_2 -l revenue_3 -l revenue_4 
 upper_global :  LEMMA
-      system |- G( (FORALL (i: table_index): i < N => ht[i].num_entries <= (THRESHOLD * max_size(i)) + NUM_THREADS));
+      system |- G( (FORALL (i: table_index): i < N => ht[i].num_entries <= (THRESHOLD * table_size(i)) + NUM_THREADS));
 		   
 
 % PROVED  
-% sal-inf-bmc -i -ice -v 1 -d 15 -s yices2 {0} upper -l pending_lb -l pending  -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g -l lemma6 -l lemma8b -l upper_strengthening_2 -l upper_strengthening_3 -l upper_strengthening_3a -l paid_tax_0 -l paid_tax_1 -l posted_0 -l posted_1 -l did_not_pay_ub -l upper_strengthening_5 -l revenue_0 -l revenue_1 -l revenue_2 -l final -l revenue_3 -l revenue_4 -l revenue_5 -l upper_global
+% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} upper -l pending_lb -l old_tables_are_full -l num_to_migrate_and_assimilated_in_old_tables -l upper_strengthening_1 -l posted_1 -l did_not_pay_ub  -l revenue_2 -l revenue_4 
 upper :  LEMMA
       system |- G( (old < new  AND not ht[old].assimilated  =>  
                     (ht[new].num_entries <= Migrated(ht,old) + (Migrated(ht,old) / T) +  (NUM_THREADS-1) + pending)));
 
-""".format(Filename)
+""".format(Filename,choose_k_induction(N),mk_pending_lemma(N))
     sb = StringBuffer()
-    sb.append(mk_pending_lemma(N,Filename))
     sb.append(lemmas)
     return str(sb)
 
-def mk_properties(Filename):
+def mk_property(Filename):
     properties = """
-% PROVED
-% sal-inf-bmc -i -ice -v 1 -d 1 -s yices2 {0} prop1 -l upper -l upper_global  -l pending_lb -l pending  -l lemma1 -l lemma2 -l lemma2a -l lemma3 -l lemma4 -l lemma5a -l lemma5b -l lemma5c -l lemma5e -l lemma5f -l lemma5g 
-prop1 : LEMMA system |- G(FORALL (i: table_index): i < old => ht[i].assimilated);
+% PROVED (-d 7 required with 7 threads)
+% sal-inf-bmc -i -ice -v 1 -d 7 -s yices2 {0} invariant -l upper -l upper_global -l pending -l table_sizes -l posted_0 -l posted_1 -l did_not_pay_ub -l revenue_2 -l revenue_4  -l upper_strengthening_1 -l out_of_mem
+invariant : LEMMA system |- G(FORALL (i: table_index): i < old => ht[i].assimilated);
+
 """.format(Filename)
     return properties
 
@@ -363,7 +362,8 @@ def main(args):
         if K < 2:
             print "ERROR: number of tables must be equal or greater than 2"
             sys.exit(1)
-            
+           
+
         filename = "lfht_{0}_{1}_{2}.sal".format(N,K,T)
         with open(filename, 'w') as sal:
             sal.write(mk_begin_context(N,K,T))
@@ -372,7 +372,7 @@ def main(args):
             sal.write(add_trans_system)
             sal.write(asyn_composition)
             sal.write(mk_lemmas(N,filename))
-            sal.write(mk_properties(filename))
+            sal.write(mk_property(filename))
             sal.write(mk_end_context())
             
         return 0
