@@ -41,9 +41,10 @@
 \newcommand{\putno}{\refstepcounter{proglineno}\begin{scriptsize}\textcolor{cyan}{\arabic{proglineno}:}\end{scriptsize}~}
 \lstset{language=C,
   basicstyle=\fontfamily{pcr}\selectfont\footnotesize\color{black},
-  keywordstyle=\color{black}\bfseries, % style for keywords
+  keywordstyle=\color{blue}\bfseries, % style for keywords
   %morekeywords=sassert,
   %morekeywords=malloc,
+  morekeywords=inline,
   numbers=none, % where to put the line-numbers   none, left, right
   % the size of the fonts that are used for the line-numbers
   numberstyle=\tiny,
