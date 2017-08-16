@@ -93,9 +93,9 @@ and the old one. This information is stored in the indexes
 \texttt{cur\_sz} represents the size of the new array. The value of
 \texttt{cur\_sz} is doubled each time the hash table needs to grow.
 
-To make our proofs simpler, our abstract model also keeps track of
-several counters to monitorize thread's activities\jorge{rename these
-  counters!}:
+To make our proofs simpler and more efficient, our abstract model also
+keeps track of several counters to monitorize thread's
+activities\jorge{rename these counters!}:
 
 \begin{itemize}
 \item \texttt{pending}: number of threads at state \pcone.
@@ -276,18 +276,18 @@ to strengthen the desired property.
 %
 Thus, we encoded the state variables and transitions from previous
 section together with the key invariant we want to prove into Sally
-format and ran Sally on it. Unfortunately, Sally was not able to find
-an inductive strengthening in a reasonable amount of time.
+format and ran Sally on it. It turned out that Sally was not able to
+find an inductive strengthening in a reasonable amount of time.
 
 Since, it is not likely that current verification technology can prove
 our key invariant in a fully automatic manner we decided to help the
 verification process by manually adding auxiliary lemmas that can make
 our property inductive.
 %
-For this, we used Sal 2~\cite{sal2}, a verification framework
-developed also by SRI. Sal 2 provides an infinite model checking
+For this, we used SAL~\cite{sal2}, a verification framework
+developed also by SRI. SAL provides an infinite model checking
 algorithm based on k-induction which is less powerful than
-Sally. However, Sal 2 allows to write lemmas in a very expressive
+Sally. However, SAL allows to write lemmas in a very expressive
 language which makes it more amenable for this semi-automatic
 process. Prior to presenting all lemmas needed to prove our key
 invariant, we define some helper functions:
@@ -604,7 +604,7 @@ the lemma.
   \begin{center}
     \begin{tabular}{|l|l|}
       \hline
-      \textsf{Lemma} & \textsf{Depends on Lemmas} \\
+      \textsf{Lemma} & \textsf{Dependencies} \\
       \hline
       \hline     
       \ref{empty_beyond_new} & $\{$\ref{old_and_new}$\}$ \\
@@ -623,8 +623,9 @@ the lemma.
      \ref{upper} & $\{$\ref{old_is_full},\ref{num_to_migrate_and_assimilated_in_old_tables},\ref{pending_lb},\ref{did_not_pay_ub},\ref{revenue1},\ref{revenue2},\ref{revenue3},\ref{posted1},\ref{upper_strengthening1}$\}$  \\
       \hline 
     \end{tabular}
-    \caption{The lemma on the left is proven assuming the lemmas on
-      the right. Lemmas that do not appear were proven without any assumption.}
+    \caption{Lemma dependencies: the lemma on the left is proven
+      assuming the lemmas on the right. Lemmas that do not appear were
+      proven without any assumption.}
     \label{table:dependencies}
     \end{center}
 \end{table}
@@ -632,7 +633,7 @@ the lemma.
 
 
 \paragraph{Experiments.} We have encoded all lemmas and the key invariant in
-the Sal language~\cite{bensalem2000overview} and used the Sal 2
+the Sal language~\cite{bensalem2000overview} and used the SAL
 k-induction engine. Some lemmas were proven without further
 strengthening but some lemmas required the help of other
 lemmas. Table~\ref{table:dependencies} shows the dependencies between
@@ -659,15 +660,15 @@ right were needed but they improved significantly verification time.
       7 & 15 & 2745 \\      
       \hline 
     \end{tabular}
-    \caption{Proving key invariant (and all auxiliary lemmas) with Sal 2 up to 7 threads}
+    \caption{Proving key invariant (and all auxiliary lemmas) with SAL up to 7 threads}
     \label{sal-results}
     \end{center}
 \end{table}
 
 
-Table~\ref{sal-results} shows the results of running Sal 2 on a 3.5GHz
+Table~\ref{sal-results} shows the results of running SAL on a 3.5GHz
 Intel Xeon processor with 16 cores and 64GB on a Linux machine. We
-proved each lemma and the key invariant using the Sal 2 command
+proved each lemma and the key invariant using the SAL command
 \texttt{sal-inf-bmc -i -d $K$ -s yices2}. We proved each lemma in
 order based on the dependencies shown in
 Table~\ref{table:dependencies}.
@@ -684,5 +685,7 @@ We were able to prove that our invariant holds up to seven
 threads. All lemmas were proven using $K=1$, except
 Lemma~\ref{upper_global} which needed up to depth $15$ for seven
 threads.
+
+
 
 
