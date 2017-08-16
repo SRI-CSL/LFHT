@@ -46,11 +46,21 @@
 	<key>Creator</key>
 	<string>Ian A Mason</string>
 	<key>DisplayScale</key>
-	<string>1 0/72 in = 1 0/72 in</string>
+	<string>1 0/72 in = 1.0000 in</string>
 	<key>GraphDocumentVersion</key>
 	<integer>8</integer>
 	<key>GraphicsList</key>
 	<array>
+		<dict>
+			<key>Bounds</key>
+			<string>{{28, 124}, {142, 80}}</string>
+			<key>Class</key>
+			<string>ShapedGraphic</string>
+			<key>ID</key>
+			<integer>14</integer>
+			<key>Shape</key>
+			<string>Rectangle</string>
+		</dict>
 		<dict>
 			<key>Class</key>
 			<string>LineGraphic</string>
@@ -58,8 +68,8 @@
 			<integer>13</integer>
 			<key>Points</key>
 			<array>
-				<string>{412, 195}</string>
-				<string>{454, 195}</string>
+				<string>{451, 424}</string>
+				<string>{493, 424}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -83,8 +93,8 @@
 			<integer>12</integer>
 			<key>Points</key>
 			<array>
-				<string>{351, 195}</string>
-				<string>{393, 195}</string>
+				<string>{380, 424}</string>
+				<string>{422, 424}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -108,8 +118,8 @@
 			<integer>11</integer>
 			<key>Points</key>
 			<array>
-				<string>{246, 195}</string>
-				<string>{288, 195}</string>
+				<string>{271, 424}</string>
+				<string>{313, 424}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -138,8 +148,8 @@
 			<integer>10</integer>
 			<key>Points</key>
 			<array>
-				<string>{142.5, 192.49998148776592}</string>
-				<string>{184.5, 192.49998148776592}</string>
+				<string>{170.49999454156045, 420.3553876523261}</string>
+				<string>{204.50002390651099, 420.19678039641661}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -173,8 +183,8 @@
 			<integer>9</integer>
 			<key>Points</key>
 			<array>
-				<string>{68.566163849290234, 67.472894725955086}</string>
-				<string>{83.694213509200324, 111.5271052740449}</string>
+				<string>{100.27113034370049, 291.4784243941221}</string>
+				<string>{114.86142706792262, 339.52165152221278}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -198,7 +208,7 @@
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{450, 113}, {61, 161}}</string>
+			<string>{{493, 344}, {61, 161}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>ID</key>
@@ -208,7 +218,7 @@
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{289, 113}, {61, 161}}</string>
+			<string>{{316, 344}, {61, 161}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>ID</key>
@@ -218,7 +228,7 @@
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{185, 112}, {61, 161}}</string>
+			<string>{{205, 340}, {61, 161}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>ID</key>
@@ -228,7 +238,7 @@
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{81, 112}, {61, 161}}</string>
+			<string>{{109, 340}, {61, 161}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>ID</key>
@@ -238,7 +248,7 @@
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{24, 53}, {84, 14}}</string>
+			<string>{{56, 277}, {84, 14}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>ID</key>
@@ -294,7 +304,7 @@
 	<key>MasterSheets</key>
 	<array/>
 	<key>ModificationDate</key>
-	<string>2017-08-02 15:10:37 +0000</string>
+	<string>2017-08-14 16:55:32 +0000</string>
 	<key>Modifier</key>
 	<string>Ian A Mason</string>
 	<key>NotesVisible</key>
@@ -375,7 +385,7 @@
 			</dict>
 		</array>
 		<key>Frame</key>
-		<string>{{947, 536}, {1142, 861}}</string>
+		<string>{{449, 414}, {1142, 861}}</string>
 		<key>ListView</key>
 		<true/>
 		<key>OutlineWidth</key>

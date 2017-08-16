@@ -1,0 +1,117 @@
+\section{Windows}
+
+Microsoft's Windows memory allocator has been the subject of regular
+attention from the hacking community. In response, Microsoft has
+developed particular security solutions for Internet Explorer and
+legacy systems going back to Windows XP. As part of their ongoing
+security efforts, Microsoft has also been improving the general resistance
+of the default \texttt{malloc} implementation that ships with Windows.
+Here, we focus particularly on the design in Windows 8.
+
+\subsection{Browser-specific memory allocators}
+
+Circa 2014, Internet Explorer introduced two new
+defenses~\cite{yason2014,simonz2014}. 
+\begin{description}
+\item [Memory protector] Newly freed objects are zeroed out but are
+  not immediately made available for reuse. Instead, a mark-and-sweep
+  style system detects whether there are live references from the
+  current call stack to any of these heap objects after they've been
+  freed. This is effective at defeating ``use after free'' attacks.
+\item [Isolated heap] This exposes multiple memory arenas to the
+  user level, similar to Apple's \texttt{libmalloc} (see
+  Section~\ref{sec:libmalloc}). Operations that could
+  potentially cross arenas, like a \texttt{realloc}, will fail. This
+  allows Internet Explorer to isolate potentially attackable objects (e.g., aspects
+  of the HTML DOM) from system objects. This could help defeat some
+  classes of heap overflow attacks.
+\end{description}
+
+In Windows 10, Microsoft rolled out ``MemGC'', which provides additional
+memory protections for its Edge and Internet Explorer 10
+browsers~\cite{yason2015}. MemGC provides a concurrent mark-and-sweep
+garbage collector, which originates with Microsoft's JavaScript
+implementation, but which also serves the rest of the browser runtime
+system.
+
+\subsection{Enhanced Mitigation Experience Toolkit}
+
+Also in 2014, Microsoft released the fifth version of its Enhanced
+Mitigation Experience Toolkit (EMET5)~\cite{metcalf2014}. EMET5 can be
+applied to versions of Windows as old as Windows XP, and has a variety
+of features, such as being able to prevent an application like Microsoft Word
+from loading an Adobe Acrobat plugin. To hinder heap attacks,
+EMET5 adds:
+\begin{description}
+\item [Heap spraying] Preallocates blocks in regions that known
+  heap-spray attacks like to use. (Trivial for new attacks to work
+  around.)
+\item [Null page] The page at the bottom of memory is pre-allocated
+  to defeat attacks meant to trick the memory allocator into giving
+  a reference to the zero / null address.
+\item [ASLR + DEP] In addition to defending against a variety of other
+  attacks, EMET adds some randomness to where \texttt{malloc}'s pages
+  will be located.
+\end{description}
+
+\subsection{Windows 8}
+The Windows 8 heap memory allocator is sufficiently complicated that
+any discussion here will necessarily be superficial.
+
+The basic design of Microsoft's heap allocator is very similar to
+other arena-based allocators, with a front-end ``low fragmentation
+heap'' (LFH) that manages large numbers of small allocations, and a
+back-end that allocates memory from the operating system and feeds it
+to the LFHs, as necessary.
+
+Where Windows Vista and earlier versions arranged free blocks as a
+doubly-linked list, Windows 8 now uses a bitmap, placing critical
+metadata out of the reach of attackers. Similarly, where metadata is
+still present, it is generally encoded (i.e., XORed with a constant),
+to make it hard for attackers to do anything useful.
+
+The most comprehensive explanation and analysis of the Windows 8 heap
+allocator can be found in Valasek and Mandt~\cite{valasek2012}. They
+describe the structures and algorithms in great detail.
+%
+Johnson and
+Miller~\cite{johnson-miller2012} discuss ongoing mitigations within Microsoft's heap allocator.
+With specific reference to heap
+allocation attacks, a Microsoft
+technical report~\cite{microsoft2013} summarizes the changes in
+Windows 8:
+
+\begin{description}
+\item [Heap integrity checks] \texttt{malloc} and \texttt{free}
+  perform checks on the metadata and terminate the computation if
+  corruption is detected.
+\item [Fatal exceptions] In older versions, when \texttt{malloc} or
+  \texttt{free} had some sort of error, they would swallow it,
+  possibly returning \texttt{null}, and thus giving attackers multiple
+  attempts at any given attack. All errors are now immediately fatal.
+\item [Freeing metadata] Hawkes~\cite{hawkes2008} shows how a
+  use-after-free attack, where the attacker can overwrite a pointer to
+  the heap metadata, could then allow an attacker to attack the heap
+  metadata structure itself. Windows 8 has specific logic in it to
+  detect this attack.
+\item [Encoded metadata] A function pointer in each heap header is
+  XORed with a constant to make it unusable by an attacker. That
+  constant is now relocated to where it's (hopefully) not easily read
+  or written by an attacker. Encoding is also used to protect metadata
+  for the ``low fragmentation heap''.
+\item [Guard pages] All large allocations ($>1$MB on a 64-bit machine)
+  go directly to the VM system, which creates a trailing guard
+  page. Smaller allocations come from ``heap segments'' which also now
+  have trailing guard pages. In some cases, these heap segments are
+  broken up, nondeterministically, with additional guard pages.
+\item [Allocation ordering] Allocations are also done in a a
+  nondeterministic order, making it harder for an attacker to do Heap
+  Feng Shui.
+\end{description}
+
+Seeley~\cite{seeley2012} observes that, while allocation order is
+randomized, the higher-level block allocations made from the operating
+system won't be. He estimates a lower-bound $50\%$ chance of
+successfully performing a heap attack on Windows 8, while pointing out
+how much easier it would be on Windows 7 and
+earlier. Liu~\cite{liu2013} makes similar observations.

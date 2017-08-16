@@ -105,7 +105,7 @@ static inline bool table_is_assimilated(lfht_hdr_t *hdr) {
 }
 
 
-bool free_lfht_hdr(lfht_hdr_t *hdr){
+static bool free_lfht_hdr(lfht_hdr_t *hdr){
   if (hdr != NULL){
     int retcode = munmap(hdr, hdr->sz);
     if (retcode != 0){
@@ -115,7 +115,7 @@ bool free_lfht_hdr(lfht_hdr_t *hdr){
   return true;
 }
 
-lfht_hdr_t *alloc_lfht_hdr(uint32_t max){
+static lfht_hdr_t *alloc_lfht_hdr(uint32_t max){
   uint64_t sz;
   void *addr;
   lfht_hdr_t *hdr;
@@ -137,6 +137,7 @@ lfht_hdr_t *alloc_lfht_hdr(uint32_t max){
   }
 }
 
+/* api */
 bool init_lfht(lfht_t *ht, uint32_t max){
   lfht_hdr_t *hdr;
   if(pthread_mutex_init(&ht->lock, NULL)){
@@ -179,7 +180,7 @@ bool delete_lfht(lfht_t *ht){
 }
 
 /* check header chain */
-uint32_t hdr_chain_length(lfht_t *ht){
+static uint32_t hdr_chain_length(lfht_t *ht){
   uint32_t length = 0;
   lfht_hdr_t *hdr;
   hdr = lfht_table_hdr(ht);
@@ -201,7 +202,7 @@ uint32_t hdr_chain_length(lfht_t *ht){
  * penultimate_table_hdr(ht) returns the second last (non-NULL) TRAILING header, or NULL if there
  * is less than three hdrs in the chain. It is only called when holding the table lock.
 */
-lfht_hdr_t *penultimate_table_hdr(lfht_t *ht){
+static lfht_hdr_t *penultimate_table_hdr(lfht_t *ht){
   lfht_hdr_t *hdr, *prev, *next;
   hdr = lfht_table_hdr(ht);
   prev = hdr;
@@ -272,7 +273,7 @@ static void free_table_check(lfht_t *ht, const char* where, bool need_lock){
   }
 }
 
-/* lock free variant */
+/* api */
 void init_handle(lfht_handle_t *h, lfht_t* table){
   lfht_hdr_t *actual, *next;
     
@@ -361,7 +362,7 @@ static void update_handle(lfht_handle_t *h){
   }
 }
 
-
+/* api */
 void delete_handle(lfht_handle_t *h){
   lfht_hdr_t *current, *p, *last;
   int prior_count;
@@ -392,7 +393,7 @@ void delete_handle(lfht_handle_t *h){
 
 
 /* returns true if this attempt succeeded; false otherwise. */
-bool _grow_table(lfht_t *ht,  lfht_hdr_t *hdr){
+static bool _grow_table(lfht_t *ht,  lfht_hdr_t *hdr){
   lfht_hdr_t *ohdr, *nhdr;
   bool retval = false;
   uint32_t omax, nmax;
@@ -452,7 +453,7 @@ static bool _lfht_add(lfht_handle_t *h, uint64_t key, uint32_t hash, uint64_t va
 static bool _lfht_find(lfht_handle_t *h, uint64_t key, uint32_t hash, uint64_t *valp);
 static bool _lfht_remove(lfht_handle_t *h, uint64_t key, uint32_t hash);
 
-
+/* api */
 bool lfht_add(lfht_handle_t *h, uint64_t key, uint64_t val){
   uint32_t hash;
   bool retval;
@@ -620,6 +621,7 @@ static bool _lfht_add(lfht_handle_t *h, uint64_t key, uint32_t hash, uint64_t va
   return retval;
 }
 
+/* api */
 bool lfht_remove(lfht_handle_t *h, uint64_t key){
   uint32_t hash;
   bool retval, current;
@@ -686,7 +688,7 @@ static bool _lfht_remove(lfht_handle_t *h, uint64_t key, uint32_t hash){
 }
 
 
-
+/* api */
 bool lfht_find(lfht_handle_t *h, uint64_t key, uint64_t *valp){
   uint32_t hash;
   bool retval, current;
@@ -911,7 +913,7 @@ static uint32_t assimilate(lfht_handle_t *h, lfht_hdr_t *from_hdr, uint64_t key,
 
 
 
-void lfht_hdr_dump(FILE* fp, lfht_hdr_t *hdr, uint32_t index){
+static void lfht_hdr_dump(FILE* fp, lfht_hdr_t *hdr, uint32_t index){
   uint32_t i, max, count, moved, tombstoned;
   lfht_entry_t*  table;
   lfht_entry_t  current;
@@ -935,6 +937,7 @@ void lfht_hdr_dump(FILE* fp, lfht_hdr_t *hdr, uint32_t index){
           count, moved, tombstoned);
 }
 
+/* api */
 void lfht_stats(FILE* fp, const char* name, lfht_t *ht){
   uint32_t index;
   lfht_hdr_t *hdr;

@@ -1,0 +1,62 @@
+\documentclass[12pt,onecolumn]{article}
+\usepackage{fullpage} % all-around 1in margins
+
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{txfonts} % Times + Times math fonts
+\usepackage[scaled=0.87]{helvet} % better visual match w/ Times
+
+%% hack to allow amsmath and pxfonts to coexist
+\let\oldnewcommand=\newcommand
+\let\newcommand=\providecommand
+\usepackage{amsmath}
+\let\newcommand=\oldnewcommand
+
+%%%% other packages %%%%
+\usepackage{setspace}                    % Line spacing
+\usepackage[usenames]{color}
+\usepackage{boxedminipage} % Surround parts of graphics with box
+\usepackage{fancyvrb}  % for pretty listings
+\usepackage{relsize} % for relative sizes
+\usepackage{graphicx}
+\usepackage{listings}
+
+\usepackage{wrapfig} % wrapped figures
+
+\usepackage{enumitem} % resumable enumerations
+
+% \usepackage[hyphens]{url} \urlstyle{sf}  % no need for those bulky typewriter URLs
+\usepackage{hyperref} \urlstyle{sf}
+
+\begin{document}
+
+\newcommand{\CompTitle}{{\fontsize{22}{18}\kern0pt\fontfamily{pag}\selectfont{HeapMetadata:}}}                                                                       
+
+\newcommand{\thetitle}{\CompTitle{}\\
+\vspace{-2pt}
+
+{\fontsize{16}{12}\fontfamily{pag}\selectfont Final report}}
+
+
+
+\newcommand{\authorlist}{Dan S.~Wallach}
+\newcommand{\authoremails}{dwallach@rice.edu}
+
+
+\title{\thetitle}
+\author{\authorlist\\\smaller\authoremails}
+\date{June 2016}
+\maketitle
+
+\section*{Overview}
+For the past month, I've been working on the HeapMetadata project. This report describes the aspects of the project where I've contributed.  I studied the use of caching for performance improvements in metadata lookups.  I investigated the use of Linux tools to allow administrators to partially or completely switch from the original glibc to SRI's glibc. And I wrote an overview of the security features that have been added over the years to {\sf malloc()} implementations from Microsoft and Apple.
+
+\input caching
+\input patchelf
+
+\section{Apple and Microsoft}
+
+I authored a separate document which considered the evolution of Microsoft's default allocator in Windows~8 as well as what they're doing in Internet Explorer (completely separate from the default allocator) as well as their EMET5 tool which can be applied to systems as early as Windows~XP. This document also discusses Apple's {\sf libmalloc} and {\sf bmalloc} libraries.
+
+
+\end{document}

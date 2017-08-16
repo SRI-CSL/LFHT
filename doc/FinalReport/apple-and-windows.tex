@@ -1,0 +1,64 @@
+\documentclass[12pt,onecolumn]{article}
+\usepackage{fullpage} % all-around 1in margins
+
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{txfonts} % Times + Times math fonts
+\usepackage[scaled=0.87]{helvet} % better visual match w/ Times
+
+%% hack to allow amsmath and pxfonts to coexist
+\let\oldnewcommand=\newcommand
+\let\newcommand=\providecommand
+\usepackage{amsmath}
+\let\newcommand=\oldnewcommand
+
+%%%% other packages %%%%
+\usepackage{setspace}                    % Line spacing
+\usepackage[usenames]{color}
+\usepackage{boxedminipage} % Surround parts of graphics with box
+\usepackage{fancyvrb}  % for pretty listings
+\usepackage{relsize} % for relative sizes
+\usepackage{graphicx}
+\usepackage{listings}
+
+\usepackage{wrapfig} % wrapped figures
+
+\usepackage{enumitem} % resumable enumerations
+
+% \usepackage[hyphens]{url} \urlstyle{sf}  % no need for those bulky typewriter URLs
+\usepackage{hyperref} \urlstyle{sf}
+
+\begin{document}
+
+\newcommand{\CompTitle}{{\fontsize{22}{18}\kern0pt\fontfamily{pag}\selectfont{HeapMetadata:}}}                                                                       
+
+\newcommand{\thetitle}{\CompTitle{}\\
+\vspace{-2pt}
+
+{\fontsize{16}{12}\fontfamily{pag}\selectfont Apple and Microsoft's
+  malloc routines}}
+
+
+
+\newcommand{\authorlist}{Dan S.~Wallach}
+\newcommand{\authoremails}{dwallach@rice.edu}
+
+
+\title{\thetitle}
+\author{\authorlist\\\smaller\authoremails}
+\date{June 2016}
+\maketitle
+
+\section{Background}
+While the HeapMetadata project has focused its efforts on the various
+{\sf malloc} routines used in Unix-family operating systems, it's
+instructive to look at how Microsoft and Apple have approached the
+same problems.
+
+\input apple
+\input windows
+
+\bibliographystyle{abbrv}
+\bibliography{apple-and-windows}
+
+\end{document}

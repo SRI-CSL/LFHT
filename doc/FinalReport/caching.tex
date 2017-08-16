@@ -1,0 +1,48 @@
+%% \subsection{Metadata lookup caching}
+
+From our profiling efforts on glibc, it was clear that
+significant amounts of overhead were going into metadata lookups.
+In traditional glibc's \texttt{malloc}, every block has its own
+metadata inline, just below the address of the pointer being given to
+\texttt{malloc}'s caller. Consequently, when \texttt{free} is called,
+all that \texttt{free} needs to do is subtract a constant from the
+pointer and it has all the metadata it needs. Because this metadata
+represents a security risk, wherein an attacker who can perform a heap
+overflow can overwrite this metadata, the primary goal of SRI's
+project was to relocate this metadata elsewhere. Consequently, the
+HeapMetadata project added a, per arena, hashtable to map from a heap pointer to
+its corresponding metadata structure.
+
+Using this hashtable, relative to the original process of just doing
+some pointer arithmetic, can be a non-trivial cost when the number of
+live pointers grows into the millions. Benchmark applications which
+rapidly allocate and free very small objects are particularly impacted
+by these costs.
+
+Our first effort was to simulate a read-cache that sits in front of
+this hashtable. With as few as 16 entries in the cache, our
+simulations indicated a hit rate as high as 50\% for these highly
+impacted benchmark applications. This suggested that a cache might be
+beneficial. Implementing this cache did indeed significantly reduce
+the CPU cache-misses encountered when running the impacted benchmarks,
+but {\em benchmark performance did not improve}. The cost of looping
+through the cache to find a hit turned out to add enough overhead to
+the cache misses to negate the benefits of cache hits.
+
+We also constructed a read cache with only two elements. Our data
+showed that this much smaller cache would have a hitrate of
+approximately 28\%, with code that would be much more efficient (e.g.,
+avoiding branches by using conditional-move
+instructions). Nonetheless, benchmark performance again did not
+improve.
+
+Lastly, the hashtable is implemented in the standard fashion where
+entries that map to the same bucket are stored as a linked list (also
+called ``separate chaining''\footnote{Wikipedia has a nice discussion
+  of how hashtable collisions are commonly
+  handled. \url{https://en.wikipedia.org/wiki/Hash_table\#Collision_resolution}}). We
+hypothesized that when an entry is found in one of these linked lists,
+we could relocate it to the head of the list. This takes constant
+time, and would ensure that a ``hot'' entry would be found
+sooner. Performance measurements showed performance improvements of
+approximately 4\% on the relevant benchmarks.

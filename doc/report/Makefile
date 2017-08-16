@@ -1,7 +1,10 @@
 FIGURES =
 
+FILES = algorithm.tex macros.tex report.tex conclusions.tex motivation.tex verification.tex implementation.tex	related_work.tex
+
+
 .PHONY: all 
-all: report.pdf
+all: ${FILES} report.pdf
 
 %.ps: %.tex *.tex ${FIGURES:%=%.eps}
 	latex $<

@@ -1,0 +1,52 @@
+\newenvironment{prtty_prg}{\begin{center}\begin{minipage}{\textwidth}\begin{tabbing}}
+	 		  {\end{tabbing}\end{minipage}\end{center}}
+
+\newcommand{\res}[1]{{\bf #1}}
+\newcommand{\procedure}{\res{proc}\=\res{edure}\ }
+\newcommand{\foreach}{\res{for }\=\res{each}\ }
+\newcommand{\while}{\res{wh}\=\res{ile}\ }
+\newcommand{\ploop}{\res{loop}\=\ }
+\newcommand{\process}{\res{proc}\=\res{ess}\ }
+
+\newcommand{\N}{\mbox{${\cal N}$}}
+\newcommand{\B}{\mbox{${\cal B}$}}
+\newcommand{\F}{\mbox{${\cal F}$}}
+\renewcommand{\L}{\mbox{${\cal L}$}}
+\newcommand{\U}{\mbox{${\cal U}$}}
+\renewcommand{\S}{\mbox{${\cal S}$}}
+\newcommand{\X}{\mbox{${\cal X}$}}
+\newcommand{\dupdate}{\triangleleft}
+
+%% \newcommand{\Q}{\mbox{$I\:\!\!\!\!\!Q$}}           % rationals
+\newcommand{\Q}{\rational}
+
+
+\newcounter{proglineno}
+
+\newcommand{\putno}{\refstepcounter{proglineno}\begin{scriptsize}\textcolor{cyan}{\arabic{proglineno}:}\end{scriptsize}~}
+
+\lstset{language=C,
+  basicstyle=\fontfamily{pcr}\selectfont\footnotesize\color{black},
+  keywordstyle=\color{black}\bfseries, % style for keywords
+  %morekeywords=sassert,
+  %morekeywords=malloc,
+  numbers=none, % where to put the line-numbers
+  % the size of the fonts that are used for the line-numbers
+  numberstyle=\tiny,
+  %backgroundcolor=\color{codebg},
+  showspaces=false, % show spaces adding particular underscores
+  showstringspaces=false, % underline spaces within strings
+  showtabs=false, % show tabs within strings adding particular underscores
+  %frame=single, % adds a frame around the code
+  %tabsize=2, % sets default tabsize to 2 spaces
+  %rulesepcolor=\color{gray},
+  %rulecolor=\color{black},
+  moredelim=[s]'',
+  captionpos=b, % sets the caption-position to bottom
+  breaklines=true, % sets automatic line breaking
+  breakatwhitespace=false}
+
+\lstnewenvironment{clisting}{\lstset{language=C,basicstyle=\ttfamily\scriptsize}}{}
+
+\lstnewenvironment{cpluslisting}{\lstset{language=C++,basicstyle=\ttfamily\scriptsize}}{}
+

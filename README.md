@@ -1,5 +1,13 @@
 # An Expanding (Almost) Lock Free Hash Table
 
+###  Prerequisites
+
+The software should build out of the box on any `x86_64` based machine with a modern C
+compiler. We rely on the [standard atomics library](http://en.cppreference.com/w/c/atomic)
+that is part of `C11`. We have tested the software as thoroughly as we could on both
+Darwin and Linux.
+
+### Building
 
 ```
 make
@@ -11,13 +19,13 @@ followed by
 make check
 ```
 
-to stress the poor wee thing
+should do some rudimentary tests.
 
 ```
 make stress
 ```
 
-be patient, it takes about a week.
+is a much more strenuous set of tests. Be patient, it takes about a week.
 
 
 The algorithm we use is inspired by a paper by [Tobias Maier](doc/concurrent_htables-v2.pdf), [arxiv](https://arxiv.org/abs/1601.04017),

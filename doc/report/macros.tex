@@ -1,37 +1,10 @@
 % !TEX root = proposal.tex
 % !TEX program = pdflatex
 
-\documentclass[12pt,letterpaper]{article}
-\usepackage{booktabs}
-\usepackage{graphicx}
-\usepackage{fullpage}
-\usepackage{times}
-\usepackage{url}
-\usepackage{enumitem}
-%\usepackage{enumerate}
-\usepackage{alltt}
-\usepackage{wrapfig}
-\usepackage{lscape}
-%\usepackage[labelfont=bf]{caption}
-\usepackage{cutwin}
-%\usepackage{geometry}
-\usepackage{amssymb,amsmath} % amsthm
-\usepackage{latexsym}
-\usepackage{xspace}
-\usepackage{listings}
-\usepackage{proof}
-\usepackage{ntheorem}
-\usepackage{tabularx}
-\usepackage{remreset}
-\usepackage{color,colortbl}
-\usepackage{etoolbox}
-%\usepackage{tikz}
-
-
 %% if on then we remove all comments for the public
 \newtoggle{public}
-\toggletrue{public}
-%\togglefalse{public}
+%\toggletrue{public}
+\togglefalse{public}
 
 %%% For final version
 \iftoggle{public}{%
@@ -46,6 +19,23 @@
 \newcommand{\bruno}[1]{{\bf\noindent \color{green} Bruno: {#1}}}
 }
 
+%% un-framed pseudo-code.
+%% Usage: \pcode[size]{content}
+\newcommand{\codesize}{\normalsize}
+\newcommand{\pcode}[2][\codesize]{
+  %  \fbox{
+  \begin{small}
+    \begin{minipage}{0.5\linewidth}
+      #1
+      \begin{tabbing}
+        xx \= xx \= xx \= xx \= xx \= xx \= xx \= xx \= xx \= xx \= \kill
+        #2
+      \end{tabbing}
+    \end{minipage}
+  \end{small}
+%  }
+}
+
 
 \newcounter{proglineno}
 \newcommand{\putno}{\refstepcounter{proglineno}\begin{scriptsize}\textcolor{cyan}{\arabic{proglineno}:}\end{scriptsize}~}
@@ -54,7 +44,7 @@
   keywordstyle=\color{black}\bfseries, % style for keywords
   %morekeywords=sassert,
   %morekeywords=malloc,
-  numbers=none, % where to put the line-numbers
+  numbers=left, % where to put the line-numbers   none, 
   % the size of the fonts that are used for the line-numbers
   numberstyle=\tiny,
   %backgroundcolor=\color{codebg},
@@ -71,5 +61,13 @@
   breakatwhitespace=false}
 \lstnewenvironment{clisting}{\lstset{language=C,basicstyle=\ttfamily\scriptsize}}{}
 \lstnewenvironment{cpluslisting}{\lstset{language=C++,basicstyle=\ttfamily\scriptsize}}{}
+
+\newtheorem{example}{Example}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{property}{Property}
 
 

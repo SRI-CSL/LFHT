@@ -1,0 +1,114 @@
+Where Art Thou Malloc Metadata?
+
+Drew Dean
+
+Computer Science Laboratory, SRI International
+
+Problem Statement
+
+Almost all modern programs make extensive use of dynamically allocated
+data structures  such as  linked lists, trees,  and other  pointer- or
+reference-filled data structures. If the  lifetime of the data exceeds
+the lifetime  of the  function or  method allocating  the data,  as is
+often the case, then  the data can not be allocated  on the stack, and
+is instead allocated from the heap. (NB: There are conflicting uses of
+the  word "heap"  as  a heap  is  also  the name  of  a specific  data
+structure. We  use the  computer science  systems terminology  in this
+white paper, where  a process' address space is  divided into sections
+commonly referred to as code (aka text), data, heap, and stack space.)
+Dynamically allocated  data structures are popular  because they allow
+programs not to have hard-coded limits in them, and adapt their memory
+use to the actual usage of the program, rather than a developer's best
+guess as to  how the application will be used.   There are two primary
+downsides to  dynamically allocated data  structures: 1) Naïve  use of
+dynamic memory allocation can  incur significant performance cost, and
+2)   Pointer   usage   errors  can   introduce   additional   security
+vulnerabilities into  software, particularly a class  of vulnerability
+known  as  a  heap  overflow.  This  white  paper  proposes  backwards
+compatible improvements to dynamic memory allocation that mitigate the
+security vulnerabilities. of dynamically allocated data structures.
+
+Technical Background
+
+We focus  on applications written  in C  that use the  system provided
+malloc()  and free()  routines. As  expected, the  use of  dynamically
+allocated  data  structures  incurs   some  overhead;  in  particular,
+malloc() and free()  need to manage heap space, keeping  track of what
+memory is  currently in  use, and  what memory  is currently  free and
+available.  We call  this overhead  malloc  metadata, as  there is  no
+standard terminology.  The traditional place to  store malloc metadata
+is in the heap itself, and it is this location that is taken advantage
+of by  the most troublesome heap  overflow exploits. Figure 1  shows a
+simple visualization  of the  heap.  The important  point is  that the
+dynamically  allocated data  and  malloc metadata  are contiguous  and
+interspersed. The  color of  any given heap  location may  change over
+time, as  memory is  allocated and  returned to  the heap.  The free()
+routine, however, implicitly  assumes that addresses it  expects to be
+red,  are actually  red. Given  certain  pointer errors  (such as  the
+double freeing of a pointer), an attacker can violate this assumption,
+leading to  arbitrary code execution.  An illustrative example  can be
+found  in  CERT   Advisory  CA-2002-07,  "Double  Free   Bug  in  zlib
+Compression Library." Regrettably little progress has been made in the
+intervening 13 years, as this vulnerability has been repeated over and
+over.
+
+Technical Approach
+
+We propose  to refactor the  implementation of malloc() and  free() to
+produce a heap layout as shown  in Figure 2.  The important difference
+is  that all  of the  malloc  metadata is  held in  a separate  memory
+region, one that is not contiguous  with the heap. This region will be
+allocated  by the  operating system  at a  randomized address.  A hash
+table is an efficient data structure that will add minimal overhead to
+finding  the   metadata  associated   with  a   dynamically  allocated
+pointer. This  is will  prevent simple  errors from  corrupting malloc
+metadata.  Instead  of reallocated  heap  data  getting confused  with
+malloc  metadata   (as  in  CERT-2002-07),  an   attacker  would  need
+primitives  to both  read the  pointer to  this region,  and overwrite
+arbitrary memory locations. While such attack primitives are certainly
+possible, the attacker's workload has  been increased, and the current
+stockpile  of heap  overflow vulnerabilities  become obsolete.  A side
+benefit  of our  approach is  that a  double free  bug can  be readily
+detected and  ignored or logged  for debugging purposes.  In  an ideal
+world, the  malloc metadata would  be stored in a  separate protection
+domain.  In the  CHERI  architecture developed  by  SRI and  Cambridge
+University in DARPA's  CRASH program, this would be  easy to implement
+efficiently with capabilities. Conventional machines would need to use
+another process  to guarantee  separation, which  may impose  too much
+overhead, depending  on the performance of  interprocess communication
+mechanisms.
+
+Research Plan
+
+We propose to  refactor the version of dlmalloc (from  Doug Lea) found
+in glibc  as described above,  and validate the new  implementation on
+Ubuntu 14.04 and CentOS 7 Linux  distributions. We will produce both a
+new libc.so  and a  libsrimalloc.so so  that dynamically  linked Linux
+software will not need to be rebuilt to use the new, safer malloc, via
+either   LD_LIBRARY_PATH    or   LD_PRELOAD    environment   variables
+(respectively) without  making other system modifications.  Of course,
+the new libc.so can be installed as  the system default. We plan on an
+extensive set of validation experiments using Firefox, Chrome, Apache,
+and other  dynamic memory allocation  intensive programs to  show that
+they  behave in  exactly  the same  way in  the  absence of  attempted
+exploitation. We will examine a selection of heap overflow exploits to
+determine if  they could be  modified readily  to attack the  new heap
+layout. This work, as a rough  order of magnitude, is expected to take
+1 person-year.   If a  higher level  of effort  could be  supported, a
+similar  approach  to malloc()  and  free()  would be  implemented  on
+Microsoft Windows,  Apple Mac  OS X  10.10 (Yosemite),  and additional
+formal modeling work  to verify the correctness  of the implementation
+would  be undertaken.  On  OS X,  the  XPC interprocess  communication
+mechanism would be  evaluated to see if it  has sufficient performance
+to support moving  malloc metadata into a  separate process. Depending
+on which  work was  undertaken, the additional  level of  effort would
+have  a ROM  estimate of  0.5–1.0 person  year(s).￼ For  simplicity of
+discussion,    we   omit    calloc(),    realloc(),   valloc(),    and
+posix_memalign() functions, as well as  the default C++ new and delete
+operators. These pose  the exact same issues, and  are covered equally
+by our  approach.￼ Pointer misuse  can introduce arbitrary  bugs and
+security  vulnerabilities into  software,  but  overwriting of  malloc
+metadata  is  the predominant  exploitation  vector  of heap  overflow
+vulnerabilities.￼   We  note   that  having   the  metadata   stored
+immediately before  the allocated  region makes  it extremely  easy to
+find. This mattered when a VAX-11/780 was a fast machine.
