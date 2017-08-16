@@ -1,20 +1,20 @@
 \newcommand{\HT}[1]{\mbox{$ht[#1]$}}
+\newcommand{\pczero}{\mbox{\texttt{init}}}
+%\newcommand{\pcone}{\mbox{ready\hspace{-0.5mm}-to\hspace{-0.5mm}-add}}
+\newcommand{\pcone}{\mbox{\texttt{ready-to-add}}}
+\newcommand{\pctwo}{\mbox{\texttt{added}}}
+\newcommand{\pcthree}{\mbox{\texttt{error}}}
+\newcommand{\negate}[1]{\mbox{$\neg\ #1$}}
+\newcommand{\incr}{\xspace\mbox{$+\hspace{-1mm}=$}\xspace}
+\newcommand{\decr}{\xspace\mbox{$-\hspace{-1mm}=$}\xspace}
 
 \section{Verification}
 \label{sec:veri}
 
-We have modeled a simplified version of the \texttt{add} operation of
-the hash table and proved some facts about the growing and data
-migration mechanism. Figure~\ref{fig:model} shows the configuration
-diagram for the \texttt{add} operation.
+We have modeled a simplified version of the \texttt{lfht\_add}
+operation and proved some facts about the growing and data migration
+mechanism.
 
-\newcommand{\pczero}{\mbox{init}}
-\newcommand{\pcone}{\mbox{ready\hspace{-0.5mm}-to\hspace{-0.5mm}-add}}
-\newcommand{\pctwo}{\mbox{added}}
-\newcommand{\pcthree}{\mbox{error}}
-\newcommand{\negate}[1]{\mbox{$\neg\ #1$}}
-\newcommand{\incr}{\mbox{\xspace$+\hspace{-1mm}=$\xspace}}
-\newcommand{\decr}{\mbox{\xspace$-\hspace{-1mm}=$\xspace}}
     
 \begin{figure}[t]
 \begin{tikzpicture}[shorten >=1pt, node distance=5cm, on grid]
@@ -23,131 +23,170 @@ diagram for the \texttt{add} operation.
   \node[draw,rectangle] (q_2) [right=of q_1] {$\pctwo$};
   \node[draw,rectangle] (q_3) [right=of q_2] {$\pcthree$};
   
-  \path[->](q_0) edge [bend left=45] node [below] {\textsf{migrate}} (q_1);
-  \path[->](q_0) edge [bend right]   node [below] {\textsf{no-migrate}} (q_1);
-  \path[->](q_1) edge                node [below] {\textsf{full}} (q_0);
-  \path[->](q_1) edge                node [above] {\textsf{add}} (q_2);
-  \path[->](q_2) edge [bend right=50]  node [above] {\textsf{grow}} (q_0);
-  \path[->](q_2) edge [bend left=50]  node [above] {\textsf{no-grow}} (q_0);  
-  \path[->](q_2) edge                node [above] {\textsf{out-of-mem}} (q_3);  
+  \path[->](q_0) edge [bend left=45] node [below] {\textbf{migrate}} (q_1);
+  \path[->](q_0) edge [bend right]   node [below] {\textbf{no-migrate}} (q_1);
+  \path[->](q_1) edge                node [below] {\textbf{full}} (q_0);
+  \path[->](q_1) edge                node [above] {\textbf{add}} (q_2);
+  \path[->](q_2) edge [bend right=50]  node [above] {\textbf{grow}} (q_0);
+  \path[->](q_2) edge [bend left=50]  node [above] {\textbf{no-grow}} (q_0);  
+  \path[->](q_2) edge                node [above] {\textbf{out-of-mem}} (q_3);  
   \path[->](q_3) edge [loop above]   node  {} ();
 \end{tikzpicture}
-\caption{Configuration diagram for \texttt{add} operation}
+\caption{Configuration diagram for the \texttt{lfht\_add} operation}
 \label{fig:model}
 \end{figure}
 
-\subsection{Abstract Model for \texttt{add}}
 
-The \texttt{add} operation has been modeled as a state machine by
-specifying a transition relation on a set of state variables. This
+
+\subsection{Abstract Model for \texttt{lfht\_add}}
+
+The \texttt{lfht\_add} operation has been modeled as a state machine
+by specifying a transition relation on a set of state variables. This
 transition relation is stated as guarded commands, where the guard
-triggers a particular transition. We first describe the state
-variables and then its transitions.
+triggers a particular transition.  We first describe the state
+variables and then all the machine transitions.
+
+\jorge{I try to use the term ``arrays'' for each table copy and the
+  term ``table'' for the whole hash table. Need to review this}
 
 \subsubsection{State Variables}
 
-A variable \emph{state} records one of the four possible states shown
-in the configuration diagram in Figure~\ref{fig:model}:
+A variable \texttt{state} records one of the four possible states
+shown in the configuration diagram in Figure~\ref{fig:model}:
 \emph{\pczero}, \emph{\pcone}, \emph{\pctwo}, and \emph{\pcthree}.
 %
-A variable \emph{ht} represents the hash table in our abstract model.
-A hash table is modeled by a list or sequence of size $N$ of
-\texttt{header} elements. The type \texttt{header} is a record of
-\emph{num\_entries}, \emph{num\_to\_migrate}, and \emph{assimilated}
-where \emph{num\_entries} is a non-negative integer that keeps track
-of the number of entries in the array, \emph{num\_to\_migrate} is
-another non-negative integer that represents the number of entries
-that needs to be migrated to the new array, and \emph{assimilated} is
-a boolean that indicates whether the array has been assimilated or
-not. Note that our abstract model ignores the contents of the hash
-table since they are irrelevant to the properties we are interested as
-we shall show later. \todo{list limitations of the model (e.g.,
-  counters updates are considered atomic, no handle)}
+From \pczero, the initial state, the machine can transition to
+\pcone\ by taking two different actions: migrating some entries from
+the old array to the new one (\textbf{migrate}) or as a non-op action
+in case that no migration is required (\textbf{no-migrate}). Only when
+the machine is at \pcone, the entry can be added into the new
+array. The state machine can either move to \pctwo\ if there is space
+in the new table (\textbf{add}) or it can go back to the initial state
+if the new table is full (\textbf{full}). Once a new entry has been
+added into the new array, the hash table might need to grow. If this
+is the case, then the state machine goes back to \pczero\ by taking
+the transition \textbf{grow}, otherwise it goes also to \pczero\ but
+taking this time the transition \textbf{no-grow}. If there is no more
+available memory to allocate then the state machine moves to an error
+state indicating that the there is no more memory and the machine
+stays there forever.
 
-\todo{note that $ht$ is in the reverse order (newest is the last)}
+The other key state variable is \texttt{ht} which represents the hash
+table in our abstract model.  A hash table is modeled by a list of
+size $N$ of \texttt{header} elements. The type \texttt{header} is a
+record of \emph{num\_entries}, \emph{num\_to\_migrate}, and
+\emph{assimilated} where \emph{num\_entries} is a non-negative integer
+that keeps track of the number of entries in the array,
+\emph{num\_to\_migrate} is another non-negative integer that
+represents the number of entries that needs to be migrated to the new
+array, and \emph{assimilated} is a boolean that indicates whether the
+array has been assimilated or not. Note that our abstract model
+ignores the contents of the actual hash table since they are
+irrelevant to the properties we are interested as we shall show
+later. \todo{list limitations of the model (e.g., counters updates are
+  considered atomic, no handle)}. For convenience, the arrays in our
+abstract model are in the reverse order, compared to the actual
+implementation. That is, the newest copy is the last element of the
+list.  Our abstract model needs to distinguish between the new array
+and the old one. This information is stored in the indexes
+\texttt{old} and \texttt{new}, respectively. The variable
+\texttt{cur\_sz} represents the size of the new table. The value of
+\texttt{cur\_sz} is doubled each time the hash table needs to grow.
 
-\todo{$ht$ is bounded}
+To make our proofs simpler, our abstract model also keeps track of
+several counters to monitorize thread's activities\jorge{rename these
+  counters!}:
 
-Since each time a new array is allocated its size is double the size
-of the previous array, our model keeps track of the size of the
-current array in a variable $k$.
-
-Our abstract model also needs to know which arrays are the old and the
-new which are stored in the variables \texttt{old} and \texttt{new},
-respectively.
-
-\todo{Describe \texttt{pending}, \texttt{did\_not\_pay},
-  \texttt{paid\_tax}, \texttt{posted}, and \texttt{revenue}.}
-
-\todo{Describe (and better names) N (number of arrays), MAX
-  (occupation percentage before growing), k (size of the new table), T
-  (number of entries to migrate), and NUM\_THREADS (number of
-  threads)}
+\begin{itemize}
+\item \texttt{pending}: number of threads at state \pcone.
+\item \texttt{did\_not\_pay}: number of threads that added an entry
+  without migrating entries from the old to the new table.
+\item \texttt{paid\_tax}: number of threads that migrated entries.
+\item \texttt{posted}: number of threads that added entries.
+\item \texttt{revenue}: number of migrated entries.  
+\end{itemize}  
 
 \subsubsection{Transitions}
 
-\noindent \textbf{Init:} \vspace{1mm}
+In this section, we show in detail all the transitions of our abstract
+model. Our model makes use of several constant parameters: $N$ is the
+number of arrays, $T$ is the occupancy threshold, $M$ is the number of
+entries that each threshold needs to migrate before adding a new
+entry, and $P$ is the number of threads. For convenience, we assume a
+type \texttt{table\_index} which denotes all natural numbers in the
+range $[1,\ldots,N]$.
+
+%% N is num of arrays
+%% T is the threshold
+%% M is the number of entries to migrate
+%% S is the current size
+%% P is the number of threads
+
+\begin{itemize}
+
+\item \textbf{Init:} 
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
   $state := \pczero$ \\
-  $\HT{i\in \{1,\ldots,N\}} := \{ num\_to\_entries := 0, num\_to\_migrate := 0, assimilated := false \}$ \\  
-  $k := 32$ \\
+  $\HT{1,\ldots,N} := \{ num\_to\_entries := 0, num\_to\_migrate := 0, assimilated := false \}$ \\  
+  $cur\_sz := 32$ \\
   $old := new := 1$ \\
   $pending := did\_not\_pay := paid\_tax := posted := revenue := 0$}
 \end{minipage}
 
-\noindent \textbf{Migrate:}  \vspace{1mm}
+
+\item \textbf{Migrate}:  
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
   $state=\pczero \wedge old \neq new \wedge \HT{old}.assimilated \rightarrow$ \\
-  \> $\HT{new}.num\_entries \incr min(T, \HT{old}.num\_to\_migrate)$ \\
-  \> $\HT{old}.num\_entries \decr min(T, \HT{old}.num\_to\_migrate)$ \\
-  \> $\HT{old}.assimilated := (ht'_{old}.num\_to\_migrate = 0)$ \\
-  \> $pending \incr 1$ \\
-  \> $paid\_tax \incr 1$ \\
-  \> $revenue \incr min(T,\HT{old}.num\_to\_migrate)$\\
+  \> $num\_to\_migrate := \mathsf{min}(M, \HT{old}.num\_to\_migrate)$ \\
+  \> $\HT{new}.num\_entries \incr num\_to\_migrate $ \\
+  \> $\HT{old}.num\_entries \decr num\_to\_migrate$ \\
+  \> $\HT{old}.assimilated := (\HT{old}.num\_to\_migrate = 0)$ \\
+  \> $pending \incr 1$, $paid\_tax \incr 1$ \\
+  \> $revenue \incr num\_to\_migrate$\\
   \> $state := \pcone$}
 \end{minipage}
 
 
-\noindent \textbf{No migrate:} \vspace{1mm}
+\item \textbf{No migrate}: 
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pczero \wedge \negate{old \neq new \wedge \HT{old}.assimilated} \rightarrow$ \\
+  $state=\pczero \wedge \negate{(old \neq new \wedge \HT{old}.assimilated)} \rightarrow$ \\
   \> $pending \incr 1$ \\
   \> $state := \pcone$}
 \end{minipage}
 
-\noindent \textbf{Added:} \vspace{1mm}
+\item \textbf{Added}: 
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pcone \wedge \HT{new}.num\_entries < k \rightarrow$ \\
+  $state=\pcone \wedge (\HT{new}.num\_entries < cur\_sz) \rightarrow$ \\
   \> $\HT{new}.num\_entries \incr 1$ \\
   \> $pending \decr 1$ \\
   \> $posted \incr 1$ \\
   \> $state := \pctwo$}
 \end{minipage}
 
-\noindent \textbf{Full:} \vspace{1mm}
+\item \textbf{Full}:
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pcone \wedge \HT{new}.num\_entries \geq k \rightarrow$ \\
+  $state=\pcone \wedge (\HT{new}.num\_entries \geq cur\_sz) \rightarrow$ \\
   \> $pending \decr 1$ \\
   \> $did\_not\_pay \decr 1$ \\
   \> $state := \pczero$}
 \end{minipage}
 
-\noindent \textbf{Grow:} \vspace{1mm}
+\item \textbf{Grow}:
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pctwo \wedge \HT{new}.num\_entries > MAX \times k \wedge new < N \rightarrow$ \\
-  \> $k := 2 \times k$ \\
+  $state=\pctwo \wedge (\HT{new}.num\_entries > (T \times cur\_sz)) \wedge (new < N) \rightarrow$ \\
+  \> $cur\_sz := 2 \times cur\_sz$ \\
   \> $old := new$ \\
   \> $new \incr 1$ \\
   \> $\HT{new+1}.num\_entries := 0$ \\
@@ -159,34 +198,23 @@ respectively.
   \> $state := \pczero$}
 \end{minipage}
 
-\noindent \textbf{No Grow:} \vspace{1mm}
+\item \textbf{No Grow}:
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pctwo \wedge \HT{new}.num\_entries \leq MAX \times k \rightarrow$ \\
-  \> $state := \pczero$}
+  $state=\pctwo \wedge (\HT{new}.num\_entries \leq (T \times cur\_sz)) \rightarrow state := \pczero$}
 \end{minipage}
 
-\noindent \textbf{Out of memory:} \vspace{1mm}
+\item\textbf{Out of memory}:
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pctwo \wedge \HT{new}.num\_entries > MAX \times k \wedge new \geq N \rightarrow$ \\
-  \> $state := \pcthree$}
+  $state=\pctwo \wedge (\HT{new}.num\_entries > (T \times cur\_sz)) \wedge (new \geq N) \rightarrow state := \pcthree$  \\
+  $state=\pcthree \rightarrow state :=\pcthree$} 
 \end{minipage}
 
-\noindent \textbf{Sink state:} \vspace{1mm}
+\end{itemize}
 
-\begin{minipage}{\linewidth}
-\pcode[\small]{
-  $state=\pcthree \rightarrow state :=\pcthree$ 
-}
-\end{minipage}
-
-We assume that there is an arbitrary (but bounded) number of threads
-calling the \texttt{add} operation in an asynchronous manner. For
-convenience, we will refer to $state[i]$ as the value of the state
-variable for thread $i$.
 
 \subsection{Proving Correctness of a Key Invariant about the Migration Mechanism}
 
@@ -197,7 +225,13 @@ copies. Informally, for all indexes $i \in \{1, \ldots, N\}$ such that
 $i < old$ then the array $i$ must be assimilated. This can be stated
 more formally as follows:
 
-  \[ G(\forall 1 \leq i \leq N.~ i < old \Rightarrow \HT{i}.assimilated) \]
+  \[ \forall 1 \leq i \leq N.~ i < old \Rightarrow \HT{i}.assimilated \]
+
+We assume that there is an arbitrary (but bounded) number of threads,
+denoted by $P$, calling the \texttt{lfth\_add} operation in an
+asynchronous manner. For convenience, we will refer to $state[i]$ as
+the value of the state variable for thread $i$.
+
 
 Current verification technology can only hope for proving whether a
 property is \emph{inductive invariant}. Informally, given a state
@@ -206,10 +240,10 @@ $x$ that represents the set of initial states, and $Tr(x,x')$, the
 transition relation defining the new values $x'$ from the old values
 $x$, we say that a property $Inv(x)$ is inductive invariant if:
 
-\begin{enumerate}
+\begin{itemize}
 \item $Init(x) \Rightarrow Inv(x)$
 \item $Inv(x) \wedge Tr(x,x') \Rightarrow Inv(x')$
-\end{enumerate}
+\end{itemize}
 
 Unfortunately, the key invariant we wish to prove is not inductive
 invariant. A common solution to this problem is to find a
@@ -217,33 +251,33 @@ invariant. A common solution to this problem is to find a
 that $Inv(x)$ in conjunction with $Inv'(x)$ becomes inductive. That
 is,
 
-\begin{enumerate}
+\begin{itemize}
 \item $Init(x) \Rightarrow (Inv(x) \wedge Inv'(x))$
 \item $(Inv(x) \wedge Inv'(x)) \wedge Tr(x,x') \Rightarrow (Inv(x') \wedge Inv'(x'))$
-\end{enumerate}
+\end{itemize}
 
-Complementary to strenghtening, another effective technique is
-$k$-induction~\cite{MouraRS03}, which is a generalization of
+Complementary to strenghtening, a very powerful verification technique
+is $k$-induction~\cite{MouraRS03}, which is a generalization of
 induction\footnote{Induction is $k$-induction for $k=1$.}. We say a
 property $Inv(x)$ is $k$-inductive if:
 
-\begin{enumerate}
+\begin{itemize}
 \item $Init(x) \Rightarrow Inv(x)$
 \item $Inv(x) \wedge Tr(x,x') \wedge \ldots \wedge Inv(x^{k-1}) \wedge Tr(x^{k-1},x^{k}) \Rightarrow Inv(x^{k})$
-\end{enumerate}
+\end{itemize}
 
 
 We used Sally~\cite{sally} a state-of-the-art model checker developed
-by SRI that combines k-induction with IC3~\cite{Bradley11}, a powerful
-technique to generate inductive invariants. A very appealing feature
-of Sally is its ability to discover fully automatically non-trivial
-inductive invariants about state machines that can be used to
-strengthen the desired property.
+by SRI that combines k-induction with IC3~\cite{Bradley11}, another
+powerful technique to generate inductive invariants. A very appealing
+feature of Sally is its ability to discover fully automatically
+non-trivial inductive invariants about state machines that can be used
+to strengthen the desired property.
 %
-Thus, we encoded the state machine from the previous section together
-with the key invariant we want to prove into Sally format and ran
-Sally on it. Unfortunately, Sally was not able to find an inductive
-strengthening in a reasonable amount of time.
+Thus, we encoded the state variables and transitions from previous
+section together with the key invariant we want to prove into Sally
+format and ran Sally on it. Unfortunately, Sally was not able to find
+an inductive strengthening in a reasonable amount of time.
 
 Since, it is not likely that current verification technology can prove
 our key invariant in a fully automatic manner we decided to help the
@@ -252,243 +286,404 @@ our property inductive.
 %
 For this, we used Sal 2~\cite{sal2}, a verification framework
 developed also by SRI. Sal 2 provides an infinite model checking
-algorithm based only on k-induction which is less powerful than
+algorithm based on k-induction which is less powerful than
 Sally. However, Sal 2 allows to write lemmas in a very expressive
 language which makes it more amenable for this semi-automatic
-process. The overall process was based on strengthening the property
-by adding new lemas obtained by inspecting a failed proof for
-inductiveness. We were able to prove semi-automatically that our key
-invariant holds up to 6 threads. For that, we needed to come up with
-32 lemmas.
+process. Prior to presenting all lemmas needed to prove our key
+invariant, we define some helper functions:
 
-\todo{Group lemmas by categories}.
+\begin{minipage}{\linewidth}
+\vspace{3mm}
+\pcode[\small]{
+  $\mathtt{bool}~\mathsf{is\_empty}(hd~:~\mathtt{header}) \equiv
+  hd.num\_entries = 0 \wedge hd.num\_to\_migrate = 0 \wedge
+  \negate{hd.assimilated}$ \\\\
+  $\mathtt{bool}~\mathsf{is\_full}(i~:~\mathtt{table\_index}, k~:~\mathtt{int}) \equiv
+  k \geq T \times 2^{(log_{2}~32) + (i-1)}$ \\\\
+  $\mathtt{int}~\mathsf{size}(i~:~\mathtt{table\_index}) \equiv
+  2^{(log_{2}~32) + (i-1)}$}
+\vspace{3mm}
+\end{minipage}
 
-\begin{lemma} %lemma1
-  $G((new = 1 \wedge old = 1) \vee (new = old+1))$
-    \label{lemma1}
-\end{lemma}
 
-\begin{lemma} %lemma2
-  $G(\forall 1 \leq i \leq N.  \wedge i > new \Rightarrow \mathsf{empty}(\HT{i}))$
+\noindent Note that the table indexes ranges from $1$ to $N$. The
+definition of \textsf{is\_empty} is straightforward. However, the
+definitions of \textsf{is\_full} and \textsf{size} require some
+explanation. Since the number of table arrays is constant (given by
+$N$) instead of using the above definitions we unfold them into a
+disjunction of simpler constraints that avoids exponentiation. For
+instance, for a given $N=6$ the definition of \textsf{is\_full}
+(similarly for \textsf{size}) can be stated as:
 
-  \noindent where $\mathsf{empty}(\HT{i})= \HT{i}.num\_entries = 0 \wedge
-  \HT{i}.num\_to\_migrate = 0 \wedge \negate{\HT{i}.assimilated}$
-  \label{lemma2}  
-\end{lemma}  
+\[ (i=1 \wedge k \geq T \times 32) \vee (i=2 \wedge k \geq T \times 64) \vee \ldots \vee (i=6 \wedge k \geq T \times 1024) \]
 
-\begin{lemma} %lemma2a
- $G(\forall 1 \leq i \leq N.  \wedge \negate{\mathsf{full}(i, \HT{i})}
-  \wedge \mathsf{size}(i,\HT{i}) \Rightarrow \forall i < j \leq N.
-  \Rightarrow \mathsf{empty}(\HT{j}))$
+We are now ready to present all necessary lemmas used to make
+inductive our key invariant. All lemmas were constructed by-hand and
+represent multiple days of effort. All these lemmas were obtained by
+trying to prove each lemma without any strengthening and inspecting a
+failed proof for inductiveness which helped us to further strengthen
+the lemma.
 
-\noindent where $\mathsf{full}(i, \HT{i})= \ldots$, and \\
-$\mathsf{size}(i, \HT{i})=\ldots$
-  \label{lemma2a}
-\end{lemma}
+\jorge{I think we can split lemmas in the following groups: only about
+  old (Lemmas~\ref{old_is_full}), only about new
+  (Lemmas~\ref{new_cannot_be_assimilated},\ref{new_cannot_migrate}),
+  relating old and new (Lemmas~\ref{old_and_new}), for multiple
+  tables
+  (Lemmas~\ref{empty_beyond_new},\ref{empty_beyond_non_full},\ref{num_to_migrate_and_num_entries},\ref{table_sizes},\ref{not_full_cannot_be_assimilated},\ref{assimilated_nothing_to_migrate},\ref{num_to_migrate_and_assimilated_in_old_tables},\ref{upper_global}),
+  and thread related
+  (Lemmas~\ref{one_thread_at_init_state_after_migration},\ref{pending},\ref{pending_lb},\ref{did_not_pay_ub},\ref{paid_tax0},\ref{paid_tax1},\ref{revenue1},\ref{revenue2},\ref{revenue3},\ref{posted0},\ref{posted1},\ref{out_of_mem}). Still need to categorize ~\ref{upper_strengthening1},\ref{upper_strengthening2},\ref{upper_strengthening3},\ref{upper},etc}
 
-\begin{lemma} %lemma3
-  $G(\forall 1 \leq i \leq N. \HT{i}.num\_to\_migrate \leq \HT{i}.num\_entries)$
-    \label{lemma3}
-\end{lemma}  
-
-\begin{lemma} %lemma4
-  $G(size(new,K))$
-    \label{lemma4}
-\end{lemma}  
-
-\begin{lemma} %lemma5a
-  $G(\negate{\HT{new}.assimilated})$
-    \label{lemma5a}
-\end{lemma}  
-
-\begin{lemma} %lemma5b
-  $G(\HT{new}.num\_to\_migrate = 0)$
-    \label{lemma5b}
-\end{lemma}  
-
-\begin{lemma} %lemma5c 
-  $G(old = new \vee full(old, \HT{old}.num\_entries))$
-    \label{lemma5c}
-\end{lemma}  
-
-\begin{lemma} %lemma5e
-  $G(\forall 1 \leq i \leq N. \negate{full(i,\HT{i})} \Rightarrow \negate{\HT{i}.assimilated})$
-  \label{lemma5e}  
-\end{lemma}  
-
-\begin{lemma} %lemma5f
-  $G(\forall 1 \leq i \leq N. \negate{full(i,\HT{i})} \Rightarrow \negate{\HT{i}.num\_to\_migrate = 0})$
-  \label{lemma5f}
-\end{lemma}  
-
-\begin{lemma} %lemma5g
-  $G(\forall 1 \leq i \leq N. \HT{i}.assimilated \Rightarrow \HT{i}.num\_to\_migrate = 0)$
-  \label{lemma5g}  
-\end{lemma}  
-
-\begin{lemma} %lemma6
+\begin{lemma}[Order of old and new arrays]
   \begin{equation*}
-    \begin{array}{l}
-    G(\forall 1 \leq i \leq N. i \leq old \wedge old < new \Rightarrow  \\
-    \quad (\mathsf{full}(i, \HT{i}) \Rightarrow \HT{i}.num\_to\_migrate = 0 \Longleftrightarrow \HT{i}.assimilated) \wedge \\
-    \quad (\negate{\mathsf{full}(i, \HT{i})} \Rightarrow \negate{(\HT{i}.num\_to\_migrate = 0 \wedge \HT{i}.assimilated)}))
+    \begin{array}{l}      
+      (new = 1 \wedge old = 1) \vee (new = old+1)
     \end{array}
   \end{equation*}
-  \label{lemma6}  
+  \label{old_and_new}
+\end{lemma}
+
+\begin{lemma}[After new arrray, all arrays must be empty]
+  \begin{equation*}
+\begin{array}{l}      
+  \forall 1 \leq i \leq N.  \wedge i > new \Rightarrow \mathsf{is\_empty}(\HT{i})
+\end{array}
+\end{equation*}  
+\label{empty_beyond_new}  
 \end{lemma}  
 
-\begin{lemma} % lemma8b
+\begin{lemma}[If an array is not full then the arrays after that  must be empty]
+  \begin{equation*}
+\begin{array}{l}        
+  \forall 1 \leq i \leq N.  \negate{\mathsf{full}(i,
+    \HT{i}.num\_entries)} \wedge (\mathsf{size}(i) =
+  \HT{i}.num\_entries) \Rightarrow \\
+  \quad \quad  \forall i < j \leq N.  \Rightarrow \mathsf{is\_empty}(\HT{j})
+\end{array}
+\end{equation*} 
+\label{empty_beyond_non_full}
+\end{lemma}
+
+\begin{lemma}[Number of migrations cannot exceed the number of entries in an array]
+  \begin{equation*}
+\begin{array}{l}        
+  \forall 1 \leq i \leq N. \HT{i}.num\_to\_migrate \leq \HT{i}.num\_entries
+\end{array}
+\end{equation*}  
+\label{num_to_migrate_and_num_entries}
+\end{lemma}  
+
+\begin{lemma}[Sizes of each array]
+  \begin{equation*}
+\begin{array}{l}        
+  \mathsf{size}(new) = cur\_sz
+\end{array}
+\end{equation*}  
+\label{table_sizes}
+\end{lemma}  
+
+\begin{lemma}[New array cannot be assimilated]
+  \begin{equation*}
+\begin{array}{l}        
+  \negate{\HT{new}.assimilated}
+\end{array}
+\end{equation*}  
+\label{new_cannot_be_assimilated}
+\end{lemma}  
+
+\begin{lemma}[New array cannot migrate entries]
+  \begin{equation*}
+\begin{array}{l}      
+  \HT{new}.num\_to\_migrate = 0
+\end{array}
+\end{equation*}  
+\label{new_cannot_migrate}
+\end{lemma}  
+
+\begin{lemma}[Old array always exceeds the occupancy threshold]
+  \begin{equation*}
+\begin{array}{l}        
+  old \neq new \Rightarrow \mathsf{is\_full}(old, \HT{old}.num\_entries)
+\end{array}
+  \end{equation*}  
+  \label{old_is_full}
+\end{lemma}  
+
+\begin{lemma}[If an array is not full then it cannot be assimilated]
+  \begin{equation*}
+\begin{array}{l}      
+  \forall 1 \leq i \leq N. \negate{\mathsf{is\_full}(i,\HT{i}.num\_entires)} \Rightarrow \negate{\HT{i}.assimilated}
+  \end{array}
+\end{equation*}
+  \label{not_full_cannot_be_assimilated}  
+\end{lemma}  
+
+\begin{lemma}[If an array is assimilated no more migrations are possible]
+  \begin{equation*}
+\begin{array}{l}        
+  \forall 1 \leq i \leq N. \HT{i}.assimilated \Rightarrow \HT{i}.num\_to\_migrate = 0
+\end{array}
+\end{equation*}
+  \label{assimilated_nothing_to_migrate}  
+\end{lemma}  
+
+\begin{lemma}[Relationship between number to migrate and assimilated flag in the old arrays]
   \begin{equation*}
     \begin{array}{l}
-      G( old \neq new \wedge \mathsf{migrated}(ht,old) = 0 \wedge \HT{new}.num\_entries = 0 \Rightarrow \\
-      \exists 1 \leq i \leq NUM\_THREADS. state[i] = \pczero)
+    \forall 1 \leq i \leq N. i \leq old \wedge old < new \Rightarrow  \\
+    \quad (\mathsf{is\_full}(i, \HT{i}.num\_entries) \Rightarrow \HT{i}.num\_to\_migrate = 0 \Longleftrightarrow \HT{i}.assimilated) \wedge \\
+    \quad (\negate{\mathsf{is\_full}(i, \HT{i}.num\_entries)} \Rightarrow \negate{(\HT{i}.num\_to\_migrate = 0 \wedge \HT{i}.assimilated)})
     \end{array}
   \end{equation*}
+  \label{num_to_migrate_and_assimilated_in_old_tables}  
+\end{lemma}  
 
-  where $\mathsf{migrated} = \ldots$
-  \label{lemma8b}
+\begin{lemma}[At least one thread at the initial state after migration]
+  \begin{equation*}
+    \begin{array}{l}
+      old \neq new \wedge (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate) = 0 \wedge \HT{new}.num\_entries = 0 \Rightarrow \\
+      \exists 1 \leq i \leq P.~state[i] = \pczero
+    \end{array}
+  \end{equation*}
+  \label{one_thread_at_init_state_after_migration}
 \end{lemma}
 
-\begin{lemma} %pending_pos
-  $G(pending \geq 0)$
-  \label{pending-pos}
+
+\begin{lemma}[Value of pending]
+  \begin{equation*}
+\begin{array}{l}        
+  pending = (\mathsf{if}~state[1]~=\pcone~ \mathsf{then}~1~\mathsf{else}~0) + \ldots + \\
+   \quad \quad \quad \quad \quad (\mathsf{if}~state[P]~= \pcone~ \mathsf{then}~1~\mathsf{else}~0)
+\end{array}
+\end{equation*}  
+  \label{pending}
 \end{lemma}  
 
-\begin{lemma} %pending_upper
-  $G(pending \leq NUM\_THREADS)$
-  \label{pending-upper}
+\begin{lemma}[Lower bound for pending]
+  \begin{equation*}
+\begin{array}{l}        
+  pending \geq 0
+\end{array}
+\end{equation*}  
+  \label{pending_lb}
 \end{lemma}  
 
-\begin{lemma} %did_not_pay_1
-  $G(did\_not\_pay < NUM\_THREADS)$
-    \label{did-not-pay-1}    
+
+\begin{lemma}[Upper bound for did\_not\_pay]
+  \begin{equation*}
+\begin{array}{l}        
+  did\_not\_pay < P
+\end{array}
+  \end{equation*}  
+  \label{did_not_pay_ub}    
 \end{lemma}  
 
-\begin{lemma} %paid_tax_0
-  $G( old = new \Rightarrow paid\_tax = 0)$
-  \label{paid-tax-0}    
+\begin{lemma}[Value for paid\_tax before having copies]
+  \begin{equation*}
+\begin{array}{l}        
+  old = new \Rightarrow paid\_tax = 0
+\end{array}
+  \end{equation*} 
+  \label{paid_tax0}    
 \end{lemma}  
 
-\begin{lemma} %paid_tax_1
-  $G(paid\_tax \geq 0)$
-    \label{paid-tax-1}  
+\begin{lemma}[Lower bound for paid\_tax]        
+  \begin{equation*}
+\begin{array}{l}
+  paid\_tax \geq 0
+\end{array}
+\end{equation*}
+  \label{paid_tax1}  
 \end{lemma}
 
-\begin{lemma} %revenue_0
-  $G(old = new \Rightarrow revenue = 0)$
-  \label{revenue0}    
-\end{lemma}
 
-\begin{lemma} %revenue_1
-  $G( revenue \geq 0)$
+\begin{lemma}[Value of revenue]
+  \begin{equation*}
+\begin{array}{l}        
+  old < new \Rightarrow revenue = \HT{old}.num\_entries - \HT{old}.num\_to\_migrate
+\end{array}
+\end{equation*}  
   \label{revenue1}    
 \end{lemma}
 
-\begin{lemma} %revenue_2
-  $G(old < new \Rightarrow revenue = \mathsf{migrated}(ht,old))$
+\begin{lemma}
+  \begin{equation*}[Upper bound for revenue]
+\begin{array}{l}        
+  old < new \Rightarrow revenue \leq \HT{old}.num\_entries
+\end{array}
+\end{equation*}
   \label{revenue2}    
 \end{lemma}
 
-\begin{lemma} %revenue_3
-  $G(old < new \Rightarrow revenue \leq \HT{old}.num\_entries)$
-  \label{revenue3}    
+\begin{lemma}[Relationship between revenue and paid\_tax]
+    \begin{equation*}
+\begin{array}{l}      
+  old < new \wedge \HT{old}.num\_to\_migrate > 0 \Rightarrow revenue = T \times paid\_tax
+\end{array}
+    \end{equation*}  
+    \label{revenue3}    
 \end{lemma}
 
-\begin{lemma} %revenue_4
-  $G(old < new \wedge \HT{old}.num\_to\_migrate > 0 \Rightarrow revenue = T \times paid\_tax)$
-  \label{revenue4}    
+\begin{lemma}[Lower bound for posted]
+    \begin{equation*}
+\begin{array}{l}      
+  posted \geq 0
+\end{array}
+    \end{equation*}  
+    \label{posted0}  
 \end{lemma}
 
-\begin{lemma} %revenue_5
-  $G(old < new \wedge \HT{old}.num\_to\_migrate > 0 \Rightarrow revenue = \HT{old}.num\_entries)$
-  \label{revenue5}  
-\end{lemma}
-
-\begin{lemma} %posted_0
-  $G(posted \geq 0)$
-  \label{posted0}  
-\end{lemma}
-
-\begin{lemma} %posted_1
-  $G(old < new \wedge h_{old}.assimilated \Rightarrow posted+ pending = paid\_tax + did\_not\_pay)$
+\begin{lemma}[Relationship between posted, pending, paid\_tax and did\_not\_pay]
+  \begin{equation*}
+    \begin{array}{l}      
+      old < new \wedge \HT{old}.assimilated \Rightarrow posted+ pending = paid\_tax + did\_not\_pay
+    \end{array}
+  \end{equation*}    
   \label{posted1}
 \end{lemma}
 
-\begin{lemma} %final
-  $G(\exists 1 \leq i \leq NUM\_THREADS. state[i] = \pcthree \Rightarrow new = N)$
-  \label{final}  
+\begin{lemma}
+  \begin{equation*}
+    \begin{array}{l}      
+      old < new \Rightarrow \HT{new}.num\_entries \leq T \times paid\_tax + posted
+    \end{array}
+  \end{equation*}  
+  \label{upper_strengthening1}
+\end{lemma}
+
+\begin{lemma}
+\begin{equation*}
+\begin{array}{l}  
+  old < new \wedge \HT{old}.num\_to\_migrate \geq t \Rightarrow \\
+  \HT{new}.num\_entries = T * paid\_tax + posted
+\end{array}
+\end{equation*}
+\label{upper_strengthening2}  
+\end{lemma}
+
+\begin{lemma}[Exact bound of the number of entries for the new array]
+  \begin{equation*}
+    \begin{array}{l}  
+      old < new \Rightarrow \\
+  \HT{new}.num\_entries = (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate) + posted
+\end{array}
+\end{equation*}
+  \label{upper_strengthening3}  
+\end{lemma}
+
+\begin{lemma}[Out of memory]
+  \begin{equation*}
+\begin{array}{l}      
+  \exists 1 \leq i \leq P. state[i] = \pcthree \Rightarrow new = N
+\end{array}
+\end{equation*}  
+  \label{out_of_mem}  
 \end{lemma}
 
 
-\begin{lemma} %upper_global
-  $G(\forall 1 \leq i < N. \HT{i}.num\_entries \leq (MAX \times \mathsf{max\_size}(i)) + NUM\_THREADS)$
-  \label{upper-global}
+\begin{lemma}[Upper bound of the number of entries for all arrays]
+  \begin{equation*}
+\begin{array}{l}      
+  \forall 1 \leq i < N. \HT{i}.num\_entries \leq (T \times \mathsf{size}(i)) + P
+\end{array}
+  \end{equation*}
+  \label{upper_global}
 \end{lemma}
 
-\begin{lemma} %upper
-  $G(old < new \wedge \negate{\HT{old}.assimilated} \Rightarrow \HT{new}.num\_entries \leq \mathsf{migrated}(ht,old) + (\mathsf{migrated}(ht,old) / T) + (NUM\_THREADS -1) + pending)$
+\begin{lemma}[Upper bound of the number of entries for all old arrays]
+  \begin{equation*}
+\begin{array}{l}    
+  old < new \wedge \negate{\HT{old}.assimilated} \Rightarrow \\
+  \HT{new}.num\_entries \leq (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate) + \\
+  (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate / T) + (P-1) + pending
+\end{array}
+\end{equation*}
   \label{upper}
 \end{lemma}
 
-\begin{lemma} %upper_strengthening_2
-  $G(old < new \Rightarrow \HT{new}.num\_entries \leq T \times paid\_tax + posted)$
-  \label{upper-strengthening-2}
-\end{lemma}
-
-\begin{lemma} %upper_strengthening_3
-  $G(old < new \wedge \HT{old}.num\_to\_migrate \geq t \Rightarrow \HT{new}.num\_entries = T * paid\_tax + posted)$
-  \label{upper-strengthening-3}  
-\end{lemma}
-
-\begin{lemma} %upper_strengthening_5
-  $G(old < new \Rightarrow \HT{new}.num\_entries =\mathsf{migrated}(ht,old) + posted )$
-  \label{upper-strengthening-5}  
-\end{lemma}
-
-
-\paragraph{Experiments.} TODO
-
-
-\begin{figure}[t]
+\begin{table}[t]
   \begin{center}
     \begin{tabular}{|l|l|}
       \hline
-      \textsf{Lemma} & \textsf{Assumed Lemmas} \\
+      \textsf{Lemma} & \textsf{Depends on Lemmas} \\
+      \hline
       \hline     
-      \ref{lemma1}   & $\emptyset$  \\
-      \ref{lemma2}   & $\{$ \ref{lemma1} $\}$ \\
-      \ref{lemma2a}  & $\emptyset$  \\
-      \ref{lemma3}   & $\emptyset$  \\
-      \ref{lemma4}   & $\emptyset$  \\
-      \ref{lemma5a}  & $\{$ \ref{lemma1},\ref{lemma4} $\}$ \\
-      \ref{lemma5b}  & $\{$ \ref{lemma1},\ref{lemma4} $\}$ \\
-      \ref{lemma5c}  & $\{$ \ref{lemma1},\ref{lemma4} $\}$ \\
-      \ref{lemma5e}  & $\{$ \ref{lemma4},\ref{lemma5c} $\}$ \\
-      \ldots & \\
+      \ref{empty_beyond_new} & $\{$\ref{old_and_new}$\}$ \\
+      \ref{new_cannot_be_assimilated}  & $\{$\ref{table_sizes}$\}$ \\
+      \ref{new_cannot_migrate}  & $\{$\ref{table_sizes}$\}$ \\
+      \ref{old_is_full}  & $\{$\ref{table_sizes}$\}$ \\
+      \ref{not_full_cannot_be_assimilated}  & $\{$\ref{old_is_full}$\}$ \\
+      \ref{assimilated_nothing_to_migrate}  & $\{$\ref{new_cannot_be_assimilated}$\}$ \\
+      \ref{num_to_migrate_and_assimilated_in_old_tables} & $\{$\ref{old_and_new},\ref{new_cannot_be_assimilated},\ref{old_is_full}$\}$ \\
+      \ref{one_thread_at_init_state_after_migration} & $\{$\ref{old_is_full},\ref{assimilated_nothing_to_migrate}$\}$ \\
+      \ref{pending_lb} & $\{$\ref{pending}$\}$ \\
+      \ref{did_not_pay_ub} & $\{$\ref{pending}$\}$ \\
+      \ref{revenue2} & $\{$\ref{revenue1}$\}$ \\
+      \ref{upper_global} & $\{$\ref{old_and_new},\ref{empty_beyond_new},\ref{empty_beyond_non_full},\ref{num_to_migrate_and_num_entries},\ref{table_sizes},\ref{new_cannot_migrate},\ref{old_is_full},\ref{not_full_cannot_be_assimilated},\ref{assimilated_nothing_to_migrate},\ref{one_thread_at_init_state_after_migration},\ref{pending},\ref{pending_lb},\ref{did_not_pay_ub},\ref{paid_tax0},\ref{paid_tax1},\ref{revenue1},\ref{revenue2},\ref{revenue3},\ref{posted0},\ref{posted1},\ref{upper_strengthening1},\ref{upper_strengthening2},\ref{upper_strengthening3},\ref{out_of_mem}$\}$ \\
+      
+     \ref{upper} & $\{$\ref{old_is_full},\ref{num_to_migrate_and_assimilated_in_old_tables},\ref{pending_lb},\ref{did_not_pay_ub},\ref{revenue2},\ref{revenue3},\ref{posted1},\ref{upper_strengthening1}$\}$  \\
       \hline 
     \end{tabular}
-    \caption{Assumed lemmas}
-    \label{lemma-dependencies}
+    \caption{The lemma on the left is proven assuming the lemmas on
+      the right. Lemmas that do not appear were proven without any assumption.}
+    \label{table:dependencies}
     \end{center}
-\end{figure}
+\end{table}
 
 
-\begin{figure}[t]
+
+\paragraph{Experiments.} We have encoded all lemmas and the key invariant in
+the Sal language~\cite{bensalem2000overview} and used the Sal 2
+k-induction engine. Some lemmas were proven without further
+strengthening but some lemmas required the help of other
+lemmas. Table~\ref{table:dependencies} shows the dependencies between
+lemmas. For the Lemma~\ref{upper_global}, not all the lemmas on the
+right were needed but they improved significantly verification time.
+
+\begin{table}[t]
   \begin{center}
     \begin{tabular}{|c|l|l|}
       \hline
       \textsf{\# Threads} & \textsf{K} & \textsf{Time(seconds)} \\
       \hline
-      2 & & \\
-      3 & & \\
-      4 & & \\
-      5 & & \\
-      6 & &  \\
+      \hline           
+      2 & 5  & 0.5\\
+      \hline           
+      3 & 7  & 1 \\
+      \hline           
+      4 & 9  & 2\\
+      \hline           
+      5 & 11 & 6 \\
+      \hline           
+      6 & 13 & 55 \\
+      \hline           
+      7 & 15 & 2745 \\      
       \hline 
     \end{tabular}
-    \caption{Proving key invariant with Sal 2 up to 6 threads}
+    \caption{Proving key invariant (and all auxiliary lemmas) with Sal 2 up to 7 threads}
     \label{sal-results}
     \end{center}
-\end{figure}
+\end{table}
 
+
+Table~\ref{sal-results} shows the results of running Sal 2 on a 3.5GHz
+Intel Xeon processor with 16 cores and 64GB on a Linux machine. We
+proved each lemma and the key invariant using the Sal 2 command
+\texttt{sal-inf-bmc -i -d $K$ -s yices2}. We proved each lemma in
+order based on the dependencies shown in
+Table~\ref{table:dependencies}.
+%
+The first column denoted by \textsf{\# Threads} is the number of
+threads, the second column denoted by $\mathsf{K}$ is the induction
+depth for the $k$-induction engine, and the third column
+(\textsf{Time}) is the accumulated verification times for all lemmas
+and the key invariant in seconds.
+%
+We were able to prove that our invariant holds up to seven
+threads. All lemmas were proven using $K=1$, except
+Lemma~\ref{upper_global} which needed up to depth $15$ for seven
+threads.
+
+\jorge{The numbers in Figure~\ref{sal-results} is with 3 tables. If we
+  increase the number of tables then we need to increase the parameter
+  $K$.}
 
