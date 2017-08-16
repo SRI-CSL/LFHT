@@ -62,36 +62,37 @@ in the new table (\textbf{add}) or it can go back to the initial state
 if the new table is full (\textbf{full}). Once a new entry has been
 added into the new table, the hash table might need to grow. If this
 is the case, then the state machine goes back to \pczero\ by taking
-the transition \textbf{grow}, otherwise it goes also to \pczero\ but
+the transition \textbf{grow}, otherwise it comes back to \pczero\ but
 taking this time the transition \textbf{no-grow}. If there is no more
 available memory to allocate then the state machine moves to an error
 state indicating that the there is no more memory and the machine
 stays there forever.
 
 The other key state variable is \texttt{ht} which represents the hash
-table in our abstract model.  Since we allow the hash table to grow by
-making a new copy and the old copy cannot be immediately freed due to
-thread interactions, our model must keep track of both the new table
-and all its old copies. Taking this into consideration, the hash table
-is modeled by an array of size $N$ of \texttt{header} elements. The
-array is indexed starting from $1$. The type \texttt{header} is a
-record of \emph{num\_entries}, \emph{num\_to\_migrate}, and
-\emph{assimilated} where \emph{num\_entries} is a non-negative integer
-that keeps track of the number of entries in the table,
-\emph{num\_to\_migrate} is another non-negative integer that
-represents the number of entries that needs to be migrated to the new
-table, and \emph{assimilated} is a boolean that indicates whether the
-table copy has been assimilated or not. Note that our abstract model
-ignores the contents of the actual hash table since they are
-irrelevant to the properties we are interested. \todo{list limitations
-  of the model (e.g., counters updates are considered atomic, no
-  handle)}. For convenience, the table headers in our abstract model
-are in the reverse order, compared to the actual implementation.  Our
-abstract model keeps track of the array slots that represent the new
-table and its previous version. This information is stored in the
-indexes \texttt{new} and \texttt{old}, respectively. The variable
-\texttt{cur\_sz} represents the size of the new table. The value of
-\texttt{cur\_sz} is doubled each time the hash table needs to grow.
+table in our abstract model.  Note that the hash table might grow by
+making a new copy but the old copy cannot be immediately freed if
+other threads are still accessing to it. Thus, our model must consider
+both the new table and all its old copies. Taking this into
+consideration, the hash table is modeled by an array of size $N$ of
+\texttt{header} elements. The array is indexed starting from $1$. The
+type \texttt{header} is a record of \emph{num\_entries},
+\emph{num\_to\_migrate}, and \emph{assimilated} where
+\emph{num\_entries} is a non-negative integer that keeps track of the
+number of entries in the table, \emph{num\_to\_migrate} is another
+non-negative integer that represents the number of entries that needs
+to be migrated to the new table, and \emph{assimilated} is a boolean
+that indicates whether the table copy has been assimilated or
+not. Note that our abstract model ignores the contents of the actual
+hash table since they are irrelevant to the properties we are
+interested. \todo{list limitations of the model (e.g., counters
+  updates are considered atomic, no handle)}. For convenience, the
+table headers in our abstract model are in the reverse order, compared
+to the actual implementation.  Our abstract model keeps track of the
+array slots that represent the new table and its previous
+version. This information is stored in the indexes \texttt{new} and
+\texttt{old}, respectively. The variable \texttt{cur\_sz} represents
+the size of the new table. The value of \texttt{cur\_sz} is doubled
+each time the hash table needs to grow.
 
 To make our proofs simpler and more efficient, our abstract model also
 keeps track of several counters to monitor thread's activities:
