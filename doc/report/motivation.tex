@@ -2,11 +2,13 @@
 \label{sec:intro}
 
 Our interest in lock-free hash tables arose naturally from the needs
-of a metadataless version of the glibc memory allocator.  The glibc
-allocator attempts to minimize contention in multithreaded
-applications by maintaining a pool of independent heaps called \emph{arenas}.
+of a version of the glibc memory allocator where metadata has been
+removed from client memory (also known as chunks).  The glibc
+allocator attempts to minimize contention in multi-threaded
+applications by maintaining a pool of independent heaps called
+\emph{arenas}.
 
-In a call to free, when chunks are preceeded by metadata, one can use
+In a call to free, when chunks are proceeded by metadata, one can use
 simple offset calculations, and pointer-chasing tricks to go from a
 chunk to its arena. When metadata is separated from the chunk,
 this is no longer possible, and as a result we use lock-free hash
@@ -18,7 +20,7 @@ relatively simple task. Many examples can be found online. An
 important aspect that is often not addressed is to allow the table to
 grow as more entries are added. This is key to ensure efficiency and
 low hash-collision rates. Growing the table leads to maintaining
-several verisons of the table: when the table grows, one must create a
+several versions of the table: when the table grows, one must create a
 new larger, initially empty table and transfer the content from the
 current table to the new table. This creates a new difficulty: when
 and how can we reclaim the memory used by the old copy, in a lock-free
@@ -26,7 +28,7 @@ fashion?
 
 The algorithm we present here solves both problems,
 it is inspired by a paper by Tobias Maier~\cite{MaierSD16}
-but is different in several important aspects. The most noticable difference
+but is different in several important aspects. The most noticeable difference
 is that we do not mark the keys before they are copied, but rather require the
 threads to copy before marking. This is not as efficient, but does not have
 a race condition that we could not eliminate.

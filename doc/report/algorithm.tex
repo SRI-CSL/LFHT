@@ -303,7 +303,7 @@ header.  This is the reason why we include a \texttt{last} pointer in the handle
 %% It is in this process that we rely on the fact that the
 %% handle's \texttt{last} field points to the oldest table whose
 %% reference count has been incremented by the handle's owning thread.
-Since a handle is local to a thread, there are no risks of no race
+Since a handle is local to a thread, there are no risks of any race
 conditions when it is updated.
 
 \begin{center}
@@ -355,7 +355,7 @@ participate in any migrating that might be required. We will describe
 the migration process in detail shortly but two properties are
 important.  First, the migration scans the old table starting from the
 hash of the key we are interesting in. If this key is present in the
-old table, the migration will then migrate it to the new opy. This
+old table, the migration will then migrate it to the new copy. This
 ensures that the addition will happen after the right key value pair
 has been moved to the current table. Second, the migration process
 endeavors to ensure that the thread handle is up to date.  Once we
