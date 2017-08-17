@@ -159,7 +159,7 @@ These correspond to the following situations:
   table.
 \item EXPANDED: The migration process has completed: there is more
   than one table, the current table is new and its predecessor has
-  been assimilated. All key-value pairs in the predcessor table have
+  been assimilated. All key-value pairs in the predecessor table have
   been copied into the new table.
 \item FINAL: The table has been deleted.
 \end{itemize}
@@ -286,7 +286,7 @@ void init_handle(lfht_handle_t *h, lfht_t* table){
 While we take care to ensure that upon initialization a thread's
 handle is up to date, we cannot maintain such an invariant. However
 the handle is designed so that it is particularly easy to determine if
-it is up to date or not, using the \texttt{upto\_date} routine.  A
+it is up to date or not, using the \texttt{up\_to\_date} routine.  A
 thread's handle is no longer up to date in the situation when the
 table has been grown by another thread.  Once a thread determines that
 its handle is no longer up to date, it must rectify the problem. 
@@ -308,7 +308,7 @@ conditions when it is updated.
 
 \begin{center}
 \begin{clisting}
-static bool upto_date(lfht_handle_t *h){
+static bool up\_to_date(lfht_handle_t *h){
   return lfht_table_hdr(h->table) == h->table_hdr;
 }
 
@@ -374,7 +374,7 @@ table was full, we rely on another thread to grow the table. This is
 sound since all threads that successfully added to the table beyond
 its threshold will try to grow the table. One will succeed.
 
-After a succesful addition to the most current table, we increment the
+After a successful addition to the most current table, we increment the
 table header's entry \texttt{count} and attempt to grow the table if
 this count is above the threshold.
 
@@ -388,7 +388,7 @@ bool lfht_add(lfht_handle_t *h, uint64_t key, uint64_t val){
   while(true){
     _migrate_table(h, key, hash);
     retval = _lfht_add(h, key, hash, val);
-    current = upto_date(h);
+    current = up\_to_date(h);
     if( retval && current ){ break; }
     if( ! current ){ update_handle(h); }
   }
@@ -407,7 +407,7 @@ bool lfht_add(lfht_handle_t *h, uint64_t key, uint64_t val){
 \subsection{Growing the Table}
 
 A thread calls function \texttt{\_grow\_table} when it detects that
-the current table (as seen from the thread's hanlde) is full. Several
+the current table (as seen from the thread's handle) is full. Several
 threads may attempt to grow the same table concurrently, so we check
 whether the thread's handle is up to date. If not, this may indicate
 that another thread has successfully grown the table.
@@ -501,7 +501,7 @@ static int32_t _migrate_table(lfht_handle_t *h, uint64_t key, uint32_t hash){
   if (table_state == EXPANDING){
     hdr = lfht_table_hdr(ht);
     ohdr = hdr->next;
-    if (!upto_date(h) ){ goto restart; }
+    if (!up\_to_date(h) ){ goto restart; }
     if(hdr == h->last){ return migrated; }
     moved = assimilate(h, ohdr, key, hash,  MIGRATIONS_PER_ACCESS);
     finished = moved < MIGRATIONS_PER_ACCESS;
@@ -605,7 +605,7 @@ successfully moves a new key-value pair or does nothing if the key it
 is trying to move is already present in the new table. The presence of
 this key in the new table indicates that another thread did the move
 previously. Function \texttt{\_lfht\_add}, on the other hand, must
-handle both the caase of a replacement (i.e., chaging the value
+handle both the case of a replacement (i.e., changing the value
 associated with a key that is already present), and the situation
 where the key has been marked as assimilated.  This can happen if the
 table has grown while this thread was interrupted and asleep, and
