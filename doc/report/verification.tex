@@ -8,16 +8,15 @@
 \newcommand{\incr}{\xspace\mbox{$+\hspace{-1mm}=$}\xspace}
 \newcommand{\decr}{\xspace\mbox{$-\hspace{-1mm}=$}\xspace}
 
-\section{Verification}
-\label{sec:veri}
+%% \section{Verification}
+%% \label{sec:veri}
 
-We have modeled a simplified version of the \texttt{lfht\_add}
-operation and proved some facts about the growing and data migration
-mechanism.
+We present a simplified model of the \texttt{lfht\_add} operation and
+prove some facts about the growing and data migration mechanism.
 
     
 \begin{figure}[t]
-\begin{tikzpicture}[shorten >=1pt, node distance=5cm, on grid]
+\begin{tikzpicture}[shorten >=1pt, node distance=4cm, on grid]
   \node[draw,rectangle]   (q_0)      {$\pczero$};
   \node[draw,rectangle] (q_1) [right=of q_0] {$\pcone$};
   \node[draw,rectangle] (q_2) [right=of q_1] {$\pctwo$};
@@ -38,7 +37,7 @@ mechanism.
 
 
 
-\subsection{Abstract Model for \texttt{lfht\_add}}
+\section{Abstract Model of \texttt{lfht\_add}}
 
 The \texttt{lfht\_add} operation has been modeled as a state machine
 by specifying a transition relation on a set of state variables. This
@@ -46,7 +45,7 @@ transition relation is stated as guarded commands, where the guard
 triggers a particular transition.  We first describe the state
 variables and then all the machine transitions.
 
-\subsubsection{State Variables}
+\subsection{State Variables}
 
 A variable \texttt{state} records one of the four possible states
 shown in the configuration diagram in Figure~\ref{fig:model}:
@@ -54,43 +53,49 @@ shown in the configuration diagram in Figure~\ref{fig:model}:
 %
 From \pczero, the initial state, the machine can transition to
 \pcone\ by taking two different actions: migrating some entries from
-the old table to the new one (\textbf{migrate}) or as a non-op action
-in case that no migration is required (\textbf{no-migrate}). Only when
-the machine is at \pcone, the entry can be added into the new
-table. The state machine can either move to \pctwo\ if there is space
-in the new table (\textbf{add}) or it can go back to the initial state
-if the new table is full (\textbf{full}). Once a new entry has been
-added into the new table, the hash table might need to grow. If this
-is the case, then the state machine goes back to \pczero\ by taking
-the transition \textbf{grow}, otherwise it comes back to \pczero\ but
-taking this time the transition \textbf{no-grow}. If there is no more
-available memory to allocate then the state machine moves to an error
-state indicating that the there is no more memory and the machine
+the old table to the new one (\textbf{migrate}) or a no-op action if
+no migration is required (\textbf{no-migrate}). An entry can be added
+into the new table only when the machine is at \pcone. The state
+machine can then either move to \pctwo\ if there is space in the new
+table (\textbf{add}) or go back to the initial state if the new table
+is full (\textbf{full}). Once a new entry has been added into the new
+table, the hash table might need to grow. If this is the case, the
+state machine goes back to \pczero\ by taking the transition
+\textbf{grow}, otherwise it comes back to \pczero\ via the transition
+\textbf{no-grow}. If no more memory is available to allocate a new
+table, the state machine moves to an error state indicating and 
 stays there forever.
 
 The other key state variable is \texttt{ht} which represents the hash
-table in our abstract model.  Note that the hash table might grow by
-making a new copy but the old copy cannot be immediately freed if
-other threads are still accessing to it. Thus, our model must consider
-both the new table and all its old copies. Taking this into
-consideration, the hash table is modeled by an array of size $N$ of
-\texttt{header} elements. The array is indexed starting from $1$. The
-type \texttt{header} is a record of \emph{num\_entries},
-\emph{num\_to\_migrate}, and \emph{assimilated} where
-\emph{num\_entries} is a non-negative integer that keeps track of the
-number of entries in the table, \emph{num\_to\_migrate} is another
-non-negative integer that represents the number of entries that needs
-to be migrated to the new table, and \emph{assimilated} is a boolean
-that indicates whether the table copy has been assimilated or
-not. Note that our abstract model ignores the contents of the actual
-hash table since they are irrelevant to the properties we are
-interested. For convenience, the table headers in our abstract model
-are in the reverse order, compared to the actual implementation.  Our
-abstract model keeps track of the array slots that represent the new
-table and its previous version. This information is stored in the
-indexes \texttt{new} and \texttt{old}, respectively. The variable
-\texttt{cur\_sz} represents the size of the new table. The value of
-\texttt{cur\_sz} is doubled each time the hash table needs to grow.
+table in our abstract model. This variable is an array of size $N$ of
+\texttt{header} elements. The array is indexed starting from $1$.
+Each element in this array is an abstract representation of a table header. 
+%% Note that the hash table might grow by
+%% making a new copy but the old copy cannot be immediately freed if
+%% other threads are still accessing to it. Thus, our model must consider
+%% both the new table and all its old copies. Taking this into
+%% consideration, the hash table is modeled by an array of size $N$ of
+%% \texttt{header} elements. The array is indexed starting from $1$.
+The type \texttt{header} is a record with three fields:
+\emph{num\_entries}, \emph{num\_to\_migrate}, and
+\emph{assimilated}. The \emph{num\_entries} is a non-negative integer
+that keeps track of the number of entries in the table,
+\emph{num\_to\_migrate} is another non-negative integer that
+represents the number of entries that needs to be migrated to the new
+table, and \emph{assimilated} is a boolean that indicates whether the
+table copy has been assimilated or not.  Our abstract model ignores
+the content of the hash table since the actual keys and values are
+irrelevant to the properties we are investigating. For convenience,
+the table headers in our abstract model are in the reverse order
+compared to the actual implementation: the oldest table is at index 1
+and new copies are created by incrementing the index.  Our model keeps
+track of the array slots that represent the current table and all
+previous versions. This information is stored in variables
+\texttt{new} and \texttt{old}: \texttt{new} is the index of the
+current table header and \texttt{old} is the index of the previous one (if any).
+Variable \texttt{cur\_sz}
+represents the size of the new table. The value of \texttt{cur\_sz} is
+doubled each time the hash table grows.
 
 To make our proofs simpler and more efficient, our abstract model also
 keeps track of several counters to monitor thread's activities:
@@ -116,15 +121,15 @@ keeps track of several counters to monitor thread's activities:
 
 \end{itemize}  
 
-\subsubsection{Transitions}
+\subsection{Transitions}
 
-In this section, we show all the transitions of our abstract
-model. Our model makes use of several constant parameters: $N$ is the
-number of table headers, $T$ is the capacity threshold, $M$ is the
-number of entries that each threshold needs to migrate before adding a
-new entry, and $P$ is the number of threads. For convenience, we
-assume a type \texttt{table\_index} which denotes all natural numbers
-in the range $[1,\ldots,N]$.
+We describe all the transitions of our abstract model. Our model makes
+use of several constant parameters: $N$ is the number of table
+headers, $T$ is the capacity threshold, $M$ is the number of entries
+that each threshold needs to migrate before adding a new entry, and
+$P$ is the number of threads. For convenience, we assume a type
+\texttt{table\_index} which denotes all natural numbers in the range
+$[1,\ldots,N]$.
 
 %% N is num of arrays
 %% T is the threshold
@@ -219,46 +224,48 @@ in the range $[1,\ldots,N]$.
 
 \begin{minipage}{\linewidth}
 \pcode[\small]{
-  $state=\pctwo \wedge (\HT{new}.num\_entries > (T \times cur\_sz)) \wedge (new \geq N) \rightarrow state := \pcthree$  \\
+  $state=\pctwo \wedge (\HT{new}.num\_entries > (T \times cur\_sz)) \wedge (new \geq N)
+  \rightarrow$ \\
+  \> $state := \pcthree$  \\
   $state=\pcthree \rightarrow state :=\pcthree$} 
 \end{minipage}
 
 \end{itemize}
 
-\subsubsection{Limitations of the Abstract Model}
+\subsection{Limitations of the Abstract Model}
 
-For reasons of tractability our abstract model differs from the actual
+For reasons of tractability, our abstract model differs from the actual
 implementation in several ways:
-
 \begin{itemize}
-\item Number of threads is bounded.
-\item Number of table copies is bounded.
+\item The number of threads is bounded.
+\item The number of table copies is bounded.
 \item All counters and Boolean flags are updated atomically.  
 \end{itemize}
-
 The assumption of having a bounded number of threads and table copies
-is imposed by SAL, our verification engine. However, we could have
-removed the assumption of having atomic counters by modeling CAS
-operations and the handle. Although we have modeled CAS operations in
+is imposed by SAL, our verification engine.
+
+We could extend our model to be more realistic by modeling CAS
+operations and table handles. Although we have modeled CAS operations in
 SAL we did not have time to model the handle.
 
 
-\subsection{Proving Correctness of a Key Invariant about the Migration Mechanism}
+\section{Key Invariant}
 
-We are interested in proving a key invariant in the implementation of
-our hash table. This invariant reflects that migration is always from
-the old table to the new one regardless of the number of
-copies. Informally, for all indexes $i \in \{1, \ldots, N\}$ such that
-if $i < old$, then the table header $i$ must be assimilated. This can be stated
-more formally as follows:
+We are interested in a key invariant of our hash table. This invariant
+reflects that migration is always from the old table to the new one,
+regardless of the number of copies. We want to prove that any table header
+that is before $old$ in the list is assimilated. This can be stated formally as
+follows:
 
   \[ \mathsf{MInv}: \forall 1 \leq i \leq N.~ i < old \Rightarrow \HT{i}.assimilated \]
 
-We assume that there is an arbitrary (but bounded) number of threads,
-denoted by $P$, calling the \texttt{lfth\_add} operation in an
-asynchronous manner. For convenience, we will refer to $state[i]$ as
-the value of the state variable for thread $i$.
+We assume that an arbitrary (but bounded) number of threads, denoted
+by $P$, perform the \texttt{lfth\_add} operation concurrently. In our
+SAL model, this amounts to creating $P$ copies of the \texttt{lfht\_add}
+state machine and composing them asynchronously. We will refer to
+$state[i]$ as the value of the state variable for thread $i$.
 
+\subsection{Proof Technique}
 
 Current verification technology typically focuses on proving
 invariants. This usually requires finding an inductive invariant that
@@ -319,10 +326,12 @@ imply our property in a reasonable amount of time.
 %% section together with the key invariant we want to prove into Sally
 %% format and ran Sally on it.
 
+\subsection{Auxiliary Lemmas}
+
 Since, it is not likely that current verification technology can prove
-our property \textsf{MInv} in a fully automatic manner we decided to help the
-verification process by manually adding auxiliary lemmas that can make
-our property inductive.
+our property \textsf{MInv} in a fully automatic manner we decided to
+help the verification process by manually adding auxiliary lemmas to
+make our property inductive.
 %
 %% For this, we used SAL~\cite{sal2}, a verification framework
 %% developed also by SRI. SAL provides an infinite model checking
@@ -330,15 +339,14 @@ our property inductive.
 %% Sally. However, SAL allows to write lemmas in a very expressive
 %% language which makes it more amenable for this semi-automatic
 %% process.
-Prior to presenting all lemmas needed to prove \textsf{MInv}, we
+Before presenting all lemmas needed to prove \textsf{MInv}, we
 define some helper functions:
 
 \begin{minipage}{\linewidth}
 \vspace{3mm}
 \pcode[\small]{
-  $\mathtt{bool}~\mathsf{is\_empty}(hd~:~\mathtt{header}) \equiv
-  hd.num\_entries = 0 \wedge hd.num\_to\_migrate = 0 \wedge
-  \negate{hd.assimilated}$ \\\\
+  $\mathtt{bool}~\mathsf{is\_empty}(hd~:~\mathtt{header}) \equiv$ \\
+  \> $hd.num\_entries = 0 \wedge hd.num\_to\_migrate = 0 \wedge \negate{hd.assimilated}$ \\\\
   $\mathtt{bool}~\mathsf{is\_full}(i~:~\mathtt{table\_index}, k~:~\mathtt{int}) \equiv
   k \geq T \times 2^{(log_{2}~32) + (i-1)}$ \\\\
   $\mathtt{int}~\mathsf{size}(i~:~\mathtt{table\_index}) \equiv
@@ -347,19 +355,19 @@ define some helper functions:
 \end{minipage}
 
 
-\noindent Note that the table indexes ranges from $1$ to $N$. The
-definition of \textsf{is\_empty} is straightforward. However, the
-definitions of \textsf{is\_full} and \textsf{size} require some
-explanation. Since the number of table headers is constant (given by
-$N$) instead of using the above definitions we unfold them into a
+\noindent The table indexes ranges from $1$ to $N$. The definition of
+\textsf{is\_empty} is straightforward. The above definitions of
+\textsf{is\_full} and \textsf{size} must be adjusted to be usable by
+SAL, by removing the exponentials. Since the number of table headers
+is constant (given by $N$), we just unfold the definitions into a
 disjunction of simpler constraints that avoids exponentiation. For
-instance, for a given $N=6$ the definition of \textsf{is\_full}
-(similarly for \textsf{size}) can be stated as:
+instance, if $N=6$, the definition of \textsf{is\_full}
+can be stated as:
 
 \[ (i=1 \wedge k \geq T \times 32) \vee (i=2 \wedge k \geq T \times 64) \vee \ldots \vee (i=6 \wedge k \geq T \times 1024) \]
 
 We are now ready to present all necessary lemmas used to make
-\textsf{MInv} inductive. All lemmas were constructed by-hand and
+\textsf{MInv} inductive. These lemmas were constructed by hand and
 represent multiple days of effort. All these lemmas were obtained by
 trying to prove each lemma without any strengthening and inspecting a
 failed proof for inductiveness which helped us to further strengthen
@@ -472,8 +480,8 @@ the lemma.
 \begin{lemma}[At least one thread must be at the initial state after migration was completed]
   \begin{equation*}
     \begin{array}{l}
-      old \neq new \wedge (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate) = 0 \wedge \HT{new}.num\_entries = 0 \Rightarrow \\
-      \exists 1 \leq i \leq P.~state[i] = \pczero
+      old \neq new \wedge (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate) = 0 \wedge \\
+      \HT{new}.num\_entries = 0 \Rightarrow \exists 1 \leq i \leq P.~state[i] = \pczero
     \end{array}
   \end{equation*}
   \label{one_thread_at_init_state_after_migration}
@@ -567,7 +575,8 @@ the lemma.
 \begin{lemma}[Relationship between assimilated in the old header, pending, mover\_count, adder\_count, and freebie\_count]
   \begin{equation*}
     \begin{array}{l}      
-      old < new \wedge \HT{old}.assimilated \Rightarrow adder\_count+ pending = mover\_count + freebie\_count
+      old < new \wedge \HT{old}.assimilated \Rightarrow \\
+      adder\_count+ pending = mover\_count + freebie\_count
     \end{array}
   \end{equation*}    
   \label{posted1}
@@ -596,7 +605,8 @@ the lemma.
   \begin{equation*}
     \begin{array}{l}  
       old < new \Rightarrow \\
-  \HT{new}.num\_entries = (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate) + adder\_count
+      \HT{new}.num\_entries = (\HT{old}.num\_entries - \HT{old}.num\_to\_migrate) + \\
+       adder\_count
 \end{array}
 \end{equation*}
   \label{upper_strengthening3}  
@@ -666,13 +676,15 @@ the lemma.
 \end{table}
 
 
+\subsection{Proofs and Experiments}
 
-\paragraph{Experiments.} To prove lemmas \ref{old_and_new}-\ref{upper} and the property \textsf{MInv} we used the SAL
-k-induction engine. Some lemmas were validated without further
-strengthening but some lemmas required the help of other lemmas,
-previously proved. Table~\ref{table:dependencies} shows the
-dependencies between lemmas. For Lemma~\ref{upper_global}, not all the
-lemmas on the right were needed but they improved significantly
+We used the SAL k-induction engine to prove lemmas
+\ref{old_and_new}-\ref{upper} and property \textsf{MInv}. Some lemmas
+were proved directly. Some lemmas depend on previously proved
+sublemmas. Table~\ref{table:dependencies} shows the dependencies
+between lemmas. Lemma~\ref{upper_global} is the most complex. The
+table shows that its proof depends on a large set of sublemmas. It is
+possible to remove some of them but this increases significantly the 
 verification time.
 
 \begin{table}[t]
@@ -708,15 +720,15 @@ proved each lemma and the property using the SAL command
 order based on the dependencies shown in
 Table~\ref{table:dependencies}.
 %
-The first column denoted by \textsf{\# Threads} is the number of
-threads, the second column denoted by $\mathsf{K}$ is the induction
+The first column (denoted by \textsf{\# Threads}) is the number of
+threads, the second column (denoted by $\mathsf{K}$) is the induction
 depth for the $k$-induction engine, and the third column
-(\textsf{Time}) is the accumulated verification times for all lemmas
+(\textsf{Time}) is the total verification times for all lemmas
 and the property in seconds. All the experiments assumed that the
 maximum number of allocated table headers is three. If this limit is exceeded
 the state machine moves to \pcthree\ state.
 %
-We were able to prove that \textsf{MInv} holds up to seven
+We were able to prove that \textsf{MInv} holds for as many as seven
 threads. All lemmas were proved using $K=1$, except
 Lemma~\ref{upper_global} which needed up to depth $15$ for seven
 threads.

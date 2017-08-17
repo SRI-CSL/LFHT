@@ -1,39 +1,54 @@
-\newenvironment{prtty_prg}{\begin{center}\begin{minipage}{\textwidth}\begin{tabbing}}
-	 		  {\end{tabbing}\end{minipage}\end{center}}
+% !TEX root = proposal.tex
+% !TEX program = pdflatex
 
-\newcommand{\res}[1]{{\bf #1}}
-\newcommand{\procedure}{\res{proc}\=\res{edure}\ }
-\newcommand{\foreach}{\res{for }\=\res{each}\ }
-\newcommand{\while}{\res{wh}\=\res{ile}\ }
-\newcommand{\ploop}{\res{loop}\=\ }
-\newcommand{\process}{\res{proc}\=\res{ess}\ }
+%% if on then we remove all comments for the public
+\newtoggle{public}
+%\toggletrue{public}
+\togglefalse{public}
 
-\newcommand{\N}{\mbox{${\cal N}$}}
-\newcommand{\B}{\mbox{${\cal B}$}}
-\newcommand{\F}{\mbox{${\cal F}$}}
-\renewcommand{\L}{\mbox{${\cal L}$}}
-\newcommand{\U}{\mbox{${\cal U}$}}
-\renewcommand{\S}{\mbox{${\cal S}$}}
-\newcommand{\X}{\mbox{${\cal X}$}}
-\newcommand{\dupdate}{\triangleleft}
+%%% For final version
+\iftoggle{public}{%
+\newcommand{\todo}[1]{}
+\newcommand{\jorge}[1]{}
+\newcommand{\ian}[1]{}
+\newcommand{\bruno}[1]{}
+}{
+\newcommand{\todo}[1]{{\bf\noindent TODO: {#1}}}
+\newcommand{\jorge}[1]{{\bf\noindent \color{blue} Jorge: {#1}}}
+\newcommand{\ian}[1]{{\bf\noindent \color{red} Ian: {#1}}}
+\newcommand{\bruno}[1]{{\bf\noindent \color{green} Bruno: {#1}}}
+}
 
-%% \newcommand{\Q}{\mbox{$I\:\!\!\!\!\!Q$}}           % rationals
-\newcommand{\Q}{\rational}
+%% un-framed pseudo-code.
+%% Usage: \pcode[size]{content}
+\newcommand{\codesize}{\normalsize}
+\newcommand{\pcode}[2][\codesize]{
+  %  \fbox{
+  \begin{small}
+    \begin{minipage}{0.5\linewidth}
+      #1
+      \begin{tabbing}
+        xx \= xx \= xx \= xx \= xx \= xx \= xx \= xx \= xx \= xx \= \kill
+        #2
+      \end{tabbing}
+    \end{minipage}
+  \end{small}
+%  }
+}
 
 
 \newcounter{proglineno}
-
 \newcommand{\putno}{\refstepcounter{proglineno}\begin{scriptsize}\textcolor{cyan}{\arabic{proglineno}:}\end{scriptsize}~}
-
 \lstset{language=C,
   basicstyle=\fontfamily{pcr}\selectfont\footnotesize\color{black},
   keywordstyle=\color{black}\bfseries, % style for keywords
   %morekeywords=sassert,
   %morekeywords=malloc,
-  numbers=none, % where to put the line-numbers
+  numbers=none, % where to put the line-numbers   none, left, right
   % the size of the fonts that are used for the line-numbers
   numberstyle=\tiny,
   %backgroundcolor=\color{codebg},
+  keywordstyle=\color{blue},
   showspaces=false, % show spaces adding particular underscores
   showstringspaces=false, % underline spaces within strings
   showtabs=false, % show tabs within strings adding particular underscores
@@ -45,8 +60,15 @@
   captionpos=b, % sets the caption-position to bottom
   breaklines=true, % sets automatic line breaking
   breakatwhitespace=false}
-
 \lstnewenvironment{clisting}{\lstset{language=C,basicstyle=\ttfamily\scriptsize}}{}
-
 \lstnewenvironment{cpluslisting}{\lstset{language=C++,basicstyle=\ttfamily\scriptsize}}{}
+
+\newtheorem{example}{Example}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{property}{Property}
+
 
