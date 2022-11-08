@@ -4,7 +4,7 @@ ARCH ?= $(shell uname -m)
 
 
 ifneq ($(ARCH), x86_64)
-  error  "Got me just one ARCH today."
+  $(error  "Got me just one ARCH today, and that puppy is x86_64.")
 endif
 
 
